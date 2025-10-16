@@ -14,7 +14,14 @@ exports.getAccount = async (req, res) => {
 
     res.json({
       success: true,
-      user
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        applications: user.applications,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
     });
   } catch (error) {
     console.error('Get account error:', error);
@@ -37,7 +44,7 @@ exports.updateAccount = async (req, res) => {
       });
     }
 
-    const { ga4_id, fb_access_token, fb_account_id } = req.body;
+    const { username, applications } = req.body;
 
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -47,10 +54,9 @@ exports.updateAccount = async (req, res) => {
       });
     }
 
-    // Update fields if provided
-    if (ga4_id !== undefined) user.ga4_id = ga4_id;
-    if (fb_access_token !== undefined) user.fb_access_token = fb_access_token;
-    if (fb_account_id !== undefined) user.fb_account_id = fb_account_id;
+    // Update fields if provided (email cannot be updated)
+    if (username !== undefined) user.username = username;
+    if (applications !== undefined) user.applications = applications;
 
     await user.save();
 
@@ -61,9 +67,9 @@ exports.updateAccount = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
-        ga4_id: user.ga4_id,
-        fb_access_token: user.fb_access_token,
-        fb_account_id: user.fb_account_id
+        applications: user.applications,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       }
     });
   } catch (error) {
