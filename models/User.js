@@ -22,6 +22,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 6
+  },
+  ga4_id: {
+    type: String,
+    default: null
+  },
+  fb_access_token: {
+    type: String,
+    default: null
+  },
+  fb_account_id: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
