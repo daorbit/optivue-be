@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
 const logger = require('./middleware/logger');
@@ -13,6 +14,10 @@ mongoose.connect(process.env.MONGODB_URI)
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Middleware
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://optivue-fe.vercel.app'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(logger);
 
