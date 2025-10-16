@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
+const accountRouter = require('./routes/account');
 const logger = require('./middleware/logger');
 require('dotenv').config();
 
@@ -24,6 +25,7 @@ app.use(logger);
 // Routes
 app.use('/', indexRouter);
 app.use('/auth', authRouter);
+app.use('/api', accountRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
