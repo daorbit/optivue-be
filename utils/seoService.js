@@ -71,7 +71,11 @@ class SeoService {
         imgCount: $('img').length,
         linkCount: $('a').length,
         wordCount: $('body').text().split(/\s+/).filter(word => word.length > 0).length,
-        hasSchema: $('script[type="application/ld+json"]').length > 0
+        hasSchema: $('script[type="application/ld+json"]').length > 0,
+        schemaTypes: this.extractSchemaTypes($),
+        internalLinks: this.countInternalLinks($, url),
+        externalLinks: this.countExternalLinks($, url),
+        headingStructure: this.analyzeHeadingStructure($)
       };
 
       return { meta, content };
@@ -123,13 +127,63 @@ class SeoService {
     }
   }
 
-  extractMetric(audit) {
-    if (!audit || !audit.numericValue) return null;
-    return {
-      value: audit.numericValue,
-      unit: audit.numericUnit || '',
-      displayValue: audit.displayValue || ''
-    };
+  extractSchemaTypes($) {
+    const schemas = [];
+    $('script[type="application/ld+json"]').each((i, elem) => {
+      try {
+        const schemaData = JSON.parse($(elem).html());
+        if (schemaData['@type']) {
+          schemas.push(schemaData['@type']);
+        } else if (schemaData['@graph']) {
+          // Handle schema.org graph format
+          schemaData['@graph'].forEach(item => {
+            if (item['@type']) {
+              schemas.push(item['@type']);
+            }
+          });
+        }
+      } catch (e) {
+        // Invalid JSON, skip
+      }
+    });
+    return [...new Set(schemas)]; // Remove duplicates
+  }
+
+  countInternalLinks($, baseUrl) {
+    const baseDomain = new URL(baseUrl).hostname;
+    let count = 0;
+    $('a[href]').each((i, elem) => {
+      const href = $(elem).attr('href');
+      if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+        count++;
+      } else if (href && href.includes(baseDomain)) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  countExternalLinks($, baseUrl) {
+    const baseDomain = new URL(baseUrl).hostname;
+    let count = 0;
+    $('a[href]').each((i, elem) => {
+      const href = $(elem).attr('href');
+      if (href && href.startsWith('http') && !href.includes(baseDomain)) {
+        count++;
+      }
+    });
+    return count;
+  }
+
+  analyzeHeadingStructure($) {
+    const headings = [];
+    for (let i = 1; i <= 6; i++) {
+      const count = $(`h${i}`).length;
+      if (count > 0) {
+        headings.push({ level: i, count, texts: $(`h${i}`).map((i, el) => $(el).text().trim()).get() });
+      }
+    }
+    return headings;
   }
 
   async getTechnicalSeoData(url) {
