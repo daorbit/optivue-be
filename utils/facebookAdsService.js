@@ -38,7 +38,7 @@ class FacebookAdsService {
       FB.setAccessToken(accessToken);
       // Ensure account ID has the 'act_' prefix
       const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
-      const fields = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time,updated_time,insights.fields(impressions,spend,reach,clicks,frequency,cpc,cpm,ctr,conversions,cost_per_conversion,actions,action_values,cost_per_action_type)';
+      const fields = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time,updated_time,insights.fields(impressions,spend,reach,clicks,frequency,cpc,cpm,ctr,conversions,cost_per_conversion,actions,action_values,cost_per_action_type,date_start,date_stop)';
       const queryParams = {
         fields,
         limit: params.limit || 50,
