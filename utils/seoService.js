@@ -75,10 +75,7 @@ class SeoService {
         schemaTypes: this.extractSchemaTypes($),
         internalLinks: this.countInternalLinks($, url),
         externalLinks: this.countExternalLinks($, url),
-        headingStructure: this.analyzeHeadingStructure($),
-        keywordDensity: this.calculateKeywordDensity($),
-        readabilityScore: this.calculateReadabilityScore($),
-        contentQuality: this.analyzeContentQuality($)
+        headingStructure: this.analyzeHeadingStructure($)
       };
 
       return { meta, content };
