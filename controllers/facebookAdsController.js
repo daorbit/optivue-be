@@ -221,3 +221,59 @@ exports.getAdsOverview = async (req, res) => {
     });
   }
 };
+
+// Get campaign creatives with media
+exports.getCampaignCreatives = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const facebookApp = user.applications.find(app =>
+      app.type === 'FACEBOOK_INSIGHTS'
+    );
+
+    if (!facebookApp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Facebook Insights application not configured'
+      });
+    }
+
+    const { accountId, accessToken } = facebookApp.configuration;
+    const { campaignId } = req.params;
+    const params = req.query;
+
+    if (!campaignId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Campaign ID is required'
+      });
+    }
+
+    const result = await facebookAdsService.getCampaignCreatives(campaignId, accessToken, params);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.data,
+      paging: result.paging
+    });
+  } catch (error) {
+    console.error('Get campaign creatives error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};

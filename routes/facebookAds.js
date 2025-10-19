@@ -19,4 +19,7 @@ router.get('/facebook-ads/insights', facebookAdsController.getInsights);
 // Get ads overview (account + insights combined)
 router.get('/facebook-ads/overview', facebookAdsController.getAdsOverview);
 
+// Get campaign creatives with media
+router.get('/facebook-ads/campaigns/:campaignId/creatives', facebookAdsController.getCampaignCreatives);
+
 module.exports = router;

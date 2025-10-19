@@ -169,6 +169,52 @@ class FacebookAdsService {
   async getAdInsights(adId, accessToken, params = {}) {
     return this.getInsights(adId, accessToken, 'ad', params);
   }
-}
 
-module.exports = new FacebookAdsService();
+  /**
+   * Get creatives for a campaign (including media assets)
+   */
+  async getCampaignCreatives(campaignId, accessToken, params = {}) {
+    try {
+      FB.setAccessToken(accessToken);
+      // First get ads for the campaign
+      const adsResponse = await FB.api(`/${campaignId}/ads`, {
+        fields: 'id,name,creative,status',
+        limit: params.limit || 10,
+        ...params
+      });
+
+      const creatives = [];
+
+      // For each ad, get the creative details with media
+      for (const ad of adsResponse.data) {
+        if (ad.creative && ad.creative.id) {
+          try {
+            const creativeResponse = await FB.api(`/${ad.creative.id}`, {
+              fields: 'id,name,title,body,image_url,video_id,thumbnail_url,object_story_spec,link_url,call_to_action'
+            });
+            creatives.push({
+              ad_id: ad.id,
+              ad_name: ad.name,
+              ad_status: ad.status,
+              creative: creativeResponse
+            });
+          } catch (creativeError) {
+            console.warn(`Failed to fetch creative for ad ${ad.id}:`, creativeError.message);
+          }
+        }
+      }
+
+      return {
+        success: true,
+        data: creatives,
+        paging: adsResponse.paging
+      };
+    } catch (error) {
+      console.error('Facebook Ads API Error (Campaign Creatives):', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch campaign creatives'
+      };
+    }
+  }
+}
