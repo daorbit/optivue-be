@@ -5,6 +5,7 @@ const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
 const accountRouter = require('./routes/account');
 const facebookAdsRouter = require('./routes/facebookAds');
+const seoRouter = require('./routes/seo');
 const logger = require('./middleware/logger');
 require('dotenv').config();
 
@@ -29,7 +30,7 @@ app.use('/', indexRouter);
 app.use('/auth', authRouter);
 app.use('/api', accountRouter);
 app.use('/api', facebookAdsRouter);
-// app.use('/api/seo', seoRouter);
+app.use('/api/seo', seoRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
