@@ -122,7 +122,7 @@ class FacebookAdsService {
       const queryParams = {
         fields,
         level,
-        time_range: params.time_range || { since: '2024-01-01', until: new Date().toISOString().split('T')[0] },
+        time_range: params.since && params.until ? { since: params.since, until: params.until } : { since: '2024-01-01', until: new Date().toISOString().split('T')[0] },
         limit: params.limit || 100,
         ...params
       };
