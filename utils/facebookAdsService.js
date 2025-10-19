@@ -254,10 +254,18 @@ class FacebookAdsService {
                     fields: 'source,thumbnails,picture'
                   });
 
+                  // Choose the largest thumbnail available
+                  let bestThumbnail = videoResponse.picture;
+                  if (videoResponse.thumbnails?.data && videoResponse.thumbnails.data.length > 0) {
+                    // Sort thumbnails by width descending and pick the largest
+                    const sortedThumbs = videoResponse.thumbnails.data.sort((a, b) => (b.width || 0) - (a.width || 0));
+                    bestThumbnail = sortedThumbs[0].uri;
+                  }
+
                   mediaUrls.push({
                     type: 'video',
                     url: videoResponse.source || spec.video_data.url,
-                    thumbnail: videoResponse.thumbnails?.data?.[0]?.uri || videoResponse.picture || spec.video_data.thumbnail
+                    thumbnail: bestThumbnail || spec.video_data.thumbnail
                   });
                 } catch (videoError) {
                   console.warn(`Failed to fetch video details for ad ${ad.id}:`, videoError.message);
