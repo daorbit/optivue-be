@@ -218,3 +218,5 @@ class FacebookAdsService {
     }
   }
 }
+
+module.exports = new FacebookAdsService();
