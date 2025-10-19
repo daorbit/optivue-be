@@ -227,8 +227,21 @@ exports.getAdsOverview = async (req, res) => {
     }
 
     // For campaigns and ads, we'll include them even if they fail, but log the errors
+    const normalizeAccount = (acct) => {
+      if (!acct) return acct;
+      const normalized = { ...acct };
+      // ensure account.id and account.account_id have 'act_' prefix
+      if (normalized.account_id && !String(normalized.account_id).startsWith('act_')) {
+        normalized.account_id = `act_${normalized.account_id}`;
+      }
+      if (normalized.id && !String(normalized.id).startsWith('act_')) {
+        normalized.id = String(normalized.id).startsWith('act_') ? normalized.id : `act_${normalized.id.replace(/^act_?/, '')}`;
+      }
+      return normalized;
+    };
+
     const responseData = {
-      account: accountResult.data,
+      account: normalizeAccount(accountResult.data),
       campaigns: campaignsResult.success ? campaignsResult.data : null,
       ads: adsResult.success ? adsResult.data : null,
       errors: {}
