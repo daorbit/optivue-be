@@ -207,29 +207,46 @@ exports.getAdsOverview = async (req, res) => {
       });
     }
 
-    // Get account info and insights in parallel
+    // Get comprehensive data: account info, campaigns with insights, and ads with creatives
     console.log('Making API calls to Facebook...');
-    const [accountResult, insightsResult] = await Promise.all([
+    const [accountResult, campaignsResult, adsResult] = await Promise.all([
       facebookAdsService.getAdAccount(accountId, accessToken),
-      facebookAdsService.getAccountInsights(accountId, accessToken, req.query)
+      facebookAdsService.getCampaignsWithInsights(accountId, accessToken, req.query),
+      facebookAdsService.getAdsWithCreatives(accountId, accessToken, req.query)
     ]);
 
-    console.log('Account result:', accountResult);
-    console.log('Insights result:', insightsResult);
+    console.log('Account result success:', accountResult.success);
+    console.log('Campaigns result success:', campaignsResult.success);
+    console.log('Ads result success:', adsResult.success);
 
-    if (!accountResult.success || !insightsResult.success) {
+    if (!accountResult.success) {
       return res.status(400).json({
         success: false,
-        message: accountResult.error || insightsResult.error
+        message: accountResult.error
       });
+    }
+
+    // For campaigns and ads, we'll include them even if they fail, but log the errors
+    const responseData = {
+      account: accountResult.data,
+      campaigns: campaignsResult.success ? campaignsResult.data : null,
+      ads: adsResult.success ? adsResult.data : null,
+      errors: {}
+    };
+
+    if (!campaignsResult.success) {
+      responseData.errors.campaigns = campaignsResult.error;
+      console.log('Campaigns error:', campaignsResult.error);
+    }
+
+    if (!adsResult.success) {
+      responseData.errors.ads = adsResult.error;
+      console.log('Ads error:', adsResult.error);
     }
 
     res.json({
       success: true,
-      data: {
-        account: accountResult.data,
-        insights: insightsResult.data
-      }
+      data: responseData
     });
   } catch (error) {
     console.error('Get ads overview error:', error);
