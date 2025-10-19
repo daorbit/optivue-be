@@ -222,40 +222,93 @@ class FacebookAdsService {
 
       // Process the response to include additional creative details
       const processedAds = await Promise.all(response.data.map(async (ad) => {
-        let enhancedCreative = ad.creative;
+        let enhancedCreative = { ...ad.creative };
+        let mediaUrls = [];
 
-        // If there's a video_id, get video details
-        if (ad.creative && ad.creative.video_id) {
-          try {
-            const videoResponse = await FB.api(`/${ad.creative.video_id}`, {
-              fields: 'id,title,description,source,thumbnails,picture,permalink_url,length,created_time'
-            });
-            enhancedCreative = {
-              ...enhancedCreative,
-              video_details: videoResponse
-            };
-          } catch (videoError) {
-            console.warn(`Failed to fetch video details for ad ${ad.id}:`, videoError.message);
-          }
-        }
+        try {
+          // Extract media URLs from object_story_spec
+          if (ad.creative?.object_story_spec) {
+            const spec = ad.creative.object_story_spec;
 
-        // If there's an image_url, get image details
-        if (ad.creative && ad.creative.image_url) {
-          try {
-            // Extract image hash from URL if needed
-            const imageHash = ad.creative.image_url.split('/').pop()?.split('.')[0];
-            if (imageHash) {
-              const imageResponse = await FB.api(`/${imageHash}`, {
-                fields: 'id,name,permalink_url,width,height,created_time'
+            // Handle different creative types
+            if (spec.image_data && spec.image_data.url) {
+              // Single image creative
+              mediaUrls.push({
+                type: 'image',
+                url: spec.image_data.url,
+                thumbnail: spec.image_data.url // Use same URL for thumbnail
               });
-              enhancedCreative = {
-                ...enhancedCreative,
-                image_details: imageResponse
-              };
+            } else if (spec.link_data && spec.link_data.picture) {
+              // Link creative with image
+              mediaUrls.push({
+                type: 'image',
+                url: spec.link_data.picture,
+                thumbnail: spec.link_data.picture
+              });
+            } else if (spec.video_data) {
+              // Video creative
+              if (spec.video_data.video_id) {
+                try {
+                  // Get video details for full URL
+                  const videoResponse = await FB.api(`/${spec.video_data.video_id}`, {
+                    fields: 'source,thumbnails,picture'
+                  });
+
+                  mediaUrls.push({
+                    type: 'video',
+                    url: videoResponse.source || spec.video_data.url,
+                    thumbnail: videoResponse.thumbnails?.data?.[0]?.uri || videoResponse.picture || spec.video_data.thumbnail
+                  });
+                } catch (videoError) {
+                  console.warn(`Failed to fetch video details for ad ${ad.id}:`, videoError.message);
+                  // Fallback to video_data URL
+                  mediaUrls.push({
+                    type: 'video',
+                    url: spec.video_data.url,
+                    thumbnail: spec.video_data.thumbnail
+                  });
+                }
+              }
+            } else if (spec.photo_data && spec.photo_data.url) {
+              // Photo data
+              mediaUrls.push({
+                type: 'image',
+                url: spec.photo_data.url,
+                thumbnail: spec.photo_data.url
+              });
             }
-          } catch (imageError) {
-            console.warn(`Failed to fetch image details for ad ${ad.id}:`, imageError.message);
           }
+
+          // Fallback to legacy fields if object_story_spec doesn't have media
+          if (mediaUrls.length === 0) {
+            if (ad.creative?.image_url) {
+              mediaUrls.push({
+                type: 'image',
+                url: ad.creative.image_url,
+                thumbnail: ad.creative.thumbnail_url || ad.creative.image_url
+              });
+            } else if (ad.creative?.video_id) {
+              try {
+                const videoResponse = await FB.api(`/${ad.creative.video_id}`, {
+                  fields: 'source,thumbnails,picture'
+                });
+                mediaUrls.push({
+                  type: 'video',
+                  url: videoResponse.source,
+                  thumbnail: videoResponse.thumbnails?.data?.[0]?.uri || videoResponse.picture
+                });
+              } catch (videoError) {
+                console.warn(`Failed to fetch video details for ad ${ad.id}:`, videoError.message);
+              }
+            }
+          }
+
+          enhancedCreative = {
+            ...enhancedCreative,
+            media_urls: mediaUrls
+          };
+        } catch (creativeError) {
+          console.warn(`Failed to process creative for ad ${ad.id}:`, creativeError.message);
         }
 
         // Determine platform (Facebook vs Instagram) based on multiple factors
