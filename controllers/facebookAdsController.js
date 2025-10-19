@@ -126,9 +126,9 @@ exports.getInsights = async (req, res) => {
     }
 
     const { accountId, accessToken } = facebookApp.configuration;
-    const { level = 'account', since, until } = req.query;
+    const { level = 'account', since, until, ...otherParams } = req.query;
 
-    const params = { ...req.query };
+    const params = { ...otherParams };
     if (since && until) {
       params.time_range = { since, until };
     }
