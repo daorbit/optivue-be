@@ -18,8 +18,17 @@ mongoose.connect(process.env.MONGODB_URI, {
   maxPoolSize: 10,
   bufferCommands: false
 })
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => {
+  console.log('Connected to MongoDB');
+  // Start the server only after MongoDB connection is established
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1); // Exit if connection fails
+});
 
 // Middleware
 app.use(cors({
@@ -42,9 +51,6 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something broke!');
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3001;
 
 module.exports = app;
