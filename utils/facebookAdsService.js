@@ -12,7 +12,9 @@ class FacebookAdsService {
   async getAdAccount(accountId, accessToken) {
     try {
       FB.setAccessToken(accessToken);
-      const response = await FB.api(`/${accountId}`, {
+      // Ensure account ID has the 'act_' prefix
+      const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+      const response = await FB.api(`/${formattedAccountId}`, {
         fields: 'id,name,account_id,currency,timezone_name,account_status,spend_cap,balance'
       });
       return {
@@ -34,7 +36,9 @@ class FacebookAdsService {
   async getCampaignsWithInsights(accountId, accessToken, params = {}) {
     try {
       FB.setAccessToken(accessToken);
-      const fields = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time,updated_time,insights.fields(impressions,spend,reach,clicks,frequency,cpc,cpm,ctr,conversions,cost_per_conversion,actions,action_values,cost_per_action_type,website_ctr,website_clicks,placement_with_impression_share)';
+      // Ensure account ID has the 'act_' prefix
+      const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+      const fields = 'id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time,updated_time,insights.fields(impressions,spend,reach,clicks,frequency,cpc,cpm,ctr,conversions,cost_per_conversion,actions,action_values,cost_per_action_type)';
       const queryParams = {
         fields,
         limit: params.limit || 50,
@@ -46,7 +50,7 @@ class FacebookAdsService {
         queryParams.time_range = { since: params.since, until: params.until };
       }
 
-      const response = await FB.api(`/${accountId}/campaigns`, queryParams);
+      const response = await FB.api(`/${formattedAccountId}/campaigns`, queryParams);
 
       // Process campaigns to determine platform (Facebook/Instagram/Mixed)
       const processedCampaigns = response.data.map(campaign => {
@@ -54,14 +58,9 @@ class FacebookAdsService {
 
         // Check if campaign has Instagram-specific insights or targeting
         if (campaign.insights && campaign.insights.data) {
-          const hasInstagramPlacement = campaign.insights.data.some(insight =>
-            insight.placement_with_impression_share &&
-            (insight.placement_with_impression_share.includes('instagram') ||
-             insight.placement_with_impression_share.includes('Instagram'))
-          );
-          if (hasInstagramPlacement) {
-            platform = 'instagram';
-          }
+          // For now, we'll determine platform based on other factors
+          // Since placement_with_impression_share is not available, we'll use a simpler approach
+          platform = 'facebook'; // Default to facebook for now
         }
 
         return {
@@ -204,7 +203,9 @@ class FacebookAdsService {
   async getAdsWithCreatives(accountId, accessToken, params = {}) {
     try {
       FB.setAccessToken(accessToken);
-      const fields = 'id,name,status,adset_id,campaign_id,date_start,date_stop,creative{id,name,effective_object_story_id,object_story_spec,thumbnail_url,image_url,video_id,object_type,title,body,link_url,call_to_action},insights.fields(impressions,spend,reach,clicks,frequency,cpc,cpm,ctr,conversions,cost_per_conversion,actions,action_values,placement_with_impression_share),tracking_specs,targeting';
+      // Ensure account ID has the 'act_' prefix
+      const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+      const fields = 'id,name,status,adset_id,campaign_id,date_start,date_stop,creative{id,name,effective_object_story_id,object_story_spec,thumbnail_url,image_url,video_id,object_type,title,body,link_url,call_to_action},insights.fields(impressions,spend,reach,clicks,frequency,cpc,cpm,ctr,conversions,cost_per_conversion,actions,action_values),tracking_specs,targeting';
       const queryParams = {
         fields,
         limit: params.limit || 50,
@@ -217,7 +218,7 @@ class FacebookAdsService {
         queryParams.time_range = { since: params.since, until: params.until };
       }
 
-      const response = await FB.api(`/${accountId}/ads`, queryParams);
+      const response = await FB.api(`/${formattedAccountId}/ads`, queryParams);
 
       // Process the response to include additional creative details
       const processedAds = await Promise.all(response.data.map(async (ad) => {
@@ -265,18 +266,6 @@ class FacebookAdsService {
           platform = 'instagram';
         } else if (ad.creative?.object_story_spec?.page_id) {
           platform = 'facebook';
-        }
-
-        // Check insights placement data
-        if (ad.insights && ad.insights.data) {
-          const hasInstagramPlacement = ad.insights.data.some(insight =>
-            insight.placement_with_impression_share &&
-            (insight.placement_with_impression_share.includes('instagram') ||
-             insight.placement_with_impression_share.includes('Instagram'))
-          );
-          if (hasInstagramPlacement) {
-            platform = 'instagram';
-          }
         }
 
         // Check targeting for Instagram-specific targeting
