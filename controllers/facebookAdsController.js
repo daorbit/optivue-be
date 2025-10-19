@@ -172,8 +172,11 @@ exports.getInsights = async (req, res) => {
 // Get Facebook Ads overview (combined data)
 exports.getAdsOverview = async (req, res) => {
   try {
+    console.log('Getting ads overview for user:', req.user.userId);
+
     const user = await User.findById(req.user.userId);
     if (!user) {
+      console.log('User not found:', req.user.userId);
       return res.status(404).json({
         success: false,
         message: 'User not found'
@@ -185,6 +188,7 @@ exports.getAdsOverview = async (req, res) => {
     );
 
     if (!facebookApp) {
+      console.log('Facebook Insights application not configured for user:', req.user.userId);
       return res.status(400).json({
         success: false,
         message: 'Facebook Insights application not configured'
@@ -192,12 +196,26 @@ exports.getAdsOverview = async (req, res) => {
     }
 
     const { accountId, accessToken } = facebookApp.configuration;
+    console.log('Account ID:', accountId);
+    console.log('Access token exists:', !!accessToken);
+
+    if (!accountId || !accessToken) {
+      console.log('Missing accountId or accessToken');
+      return res.status(400).json({
+        success: false,
+        message: 'Facebook account ID and access token are required'
+      });
+    }
 
     // Get account info and insights in parallel
+    console.log('Making API calls to Facebook...');
     const [accountResult, insightsResult] = await Promise.all([
       facebookAdsService.getAdAccount(accountId, accessToken),
       facebookAdsService.getAccountInsights(accountId, accessToken, req.query)
     ]);
+
+    console.log('Account result:', accountResult);
+    console.log('Insights result:', insightsResult);
 
     if (!accountResult.success || !insightsResult.success) {
       return res.status(400).json({
@@ -215,6 +233,7 @@ exports.getAdsOverview = async (req, res) => {
     });
   } catch (error) {
     console.error('Get ads overview error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error'
