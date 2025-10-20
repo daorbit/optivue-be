@@ -158,14 +158,26 @@ class SeoService {
       const responses = await Promise.all(requests);
 
       const results = responses.map((res, i) => {
-        const lighthouse = res.data.lighthouseResult;
-        const audits = lighthouse.audits;
+        const lighthouse = res.data.lighthouseResult || {};
+        const audits = lighthouse.audits || {};
+        const categories = lighthouse.categories || {};
+
+        const perfCat = categories.performance;
+        const accCat = categories.accessibility;
+        const bpCat = categories["best-practices"];
+        const seoCat = categories.seo;
+
+        const scores = {
+          performance: perfCat?.score !== undefined && perfCat?.score !== null ? Math.round(perfCat.score * 100) : null,
+          accessibility: accCat?.score !== undefined && accCat?.score !== null ? Math.round(accCat.score * 100) : null,
+          bestPractices: bpCat?.score !== undefined && bpCat?.score !== null ? Math.round(bpCat.score * 100) : null,
+          seo: seoCat?.score !== undefined && seoCat?.score !== null ? Math.round(seoCat.score * 100) : null,
+        };
 
         return {
           strategy: strategies[i],
-          overallScore: (lighthouse.categories.performance.score * 100).toFixed(
-            0
-          ),
+          overallScore: scores.performance !== null ? scores.performance : null,
+          scores,
           metrics: {
             firstContentfulPaint: this.extractMetric(
               audits["first-contentful-paint"]
@@ -185,10 +197,22 @@ class SeoService {
         };
       });
 
+      const desktopResult = results.find((r) => r.strategy === "desktop") || null;
+      const mobileResult = results.find((r) => r.strategy === "mobile") || null;
+
+      // Provide a top-level aggregated scores object (prefer desktop, then mobile)
+      const aggregatedScores = {
+        performance: desktopResult?.scores?.performance ?? mobileResult?.scores?.performance ?? null,
+        accessibility: desktopResult?.scores?.accessibility ?? mobileResult?.scores?.accessibility ?? null,
+        bestPractices: desktopResult?.scores?.bestPractices ?? mobileResult?.scores?.bestPractices ?? null,
+        seo: desktopResult?.scores?.seo ?? mobileResult?.scores?.seo ?? null,
+      };
+
       return {
         url,
-        desktop: results.find((r) => r.strategy === "desktop"),
-        mobile: results.find((r) => r.strategy === "mobile"),
+        desktop: desktopResult,
+        mobile: mobileResult,
+        scores: aggregatedScores,
       };
     } catch (error) {
       console.error(
@@ -207,7 +231,7 @@ class SeoService {
     return {
       title: audit.title,
       displayValue: audit.displayValue || "N/A",
-      score: audit.score !== null ? (audit.score * 100).toFixed(0) : null,
+      score: audit.score !== null && audit.score !== undefined ? Math.round(audit.score * 100) : null,
     };
   }
 
