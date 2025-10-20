@@ -89,7 +89,7 @@ class SeoService {
         };
       }
 
-      const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=${apiKey}&strategy=mobile`;
+      const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&key=AIzaSyDqSpw-FOrNgnhvjAICNWQaZgSntdLR6KI&strategy=mobile`;
 
       const response = await axios.get(apiUrl, { timeout: 30000 });
 
