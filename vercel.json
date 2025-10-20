@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.js"
+    }
+  ],
+  "env": {
+    "PORT": "8000",
+    "MONGODB_URI": "mongodb+srv://Vercel-Admin-da-orbit-db:Avnt6esvx7rJSf8S@da-orbit-db.mus3jx8.mongodb.net/?retryWrites=true&w=majority"
+  }
+  }
