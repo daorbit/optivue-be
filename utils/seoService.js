@@ -146,11 +146,20 @@ class SeoService {
       }
 
       const strategies = ["mobile", "desktop"];
+      const categories = [
+        "performance",
+        "accessibility",
+        "best-practices",
+        "seo",
+      ];
+
       const requests = strategies.map((strategy) =>
         axios.get(
           `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
             url
-          )}&strategy=${strategy}&category=performance&key=${apiKey}`,
+          )}&strategy=${strategy}&${categories
+            .map((c) => `category=${c}`)
+            .join("&")}&key=${apiKey}`,
           { timeout: 30000 }
         )
       );
@@ -160,51 +169,58 @@ class SeoService {
       const results = responses.map((res, i) => {
         const lighthouse = res.data.lighthouseResult || {};
         const audits = lighthouse.audits || {};
-        const categories = lighthouse.categories || {};
+        const cats = lighthouse.categories || {};
 
-        const perfCat = categories.performance;
-        const accCat = categories.accessibility;
-        const bpCat = categories["best-practices"];
-        const seoCat = categories.seo;
+        const getScore = (cat) =>
+          cat?.score != null ? Math.round(cat.score * 100) : null;
 
         const scores = {
-          performance: perfCat?.score !== undefined && perfCat?.score !== null ? Math.round(perfCat.score * 100) : null,
-          accessibility: accCat?.score !== undefined && accCat?.score !== null ? Math.round(accCat.score * 100) : null,
-          bestPractices: bpCat?.score !== undefined && bpCat?.score !== null ? Math.round(bpCat.score * 100) : null,
-          seo: seoCat?.score !== undefined && seoCat?.score !== null ? Math.round(seoCat.score * 100) : null,
+          performance: getScore(cats.performance),
+          accessibility: getScore(cats.accessibility),
+          bestPractices: getScore(cats["best-practices"]),
+          seo: getScore(cats.seo),
         };
+
+        const extractMetric = (metric) =>
+          metric?.numericValue != null ? Math.round(metric.numericValue) : null;
 
         return {
           strategy: strategies[i],
-          overallScore: scores.performance !== null ? scores.performance : null,
+          overallScore: scores.performance,
           scores,
           metrics: {
-            firstContentfulPaint: this.extractMetric(
+            firstContentfulPaint: extractMetric(
               audits["first-contentful-paint"]
             ),
-            speedIndex: this.extractMetric(audits["speed-index"]),
-            largestContentfulPaint: this.extractMetric(
+            speedIndex: extractMetric(audits["speed-index"]),
+            largestContentfulPaint: extractMetric(
               audits["largest-contentful-paint"]
             ),
-            interactive: this.extractMetric(audits["interactive"]),
-            totalBlockingTime: this.extractMetric(
-              audits["total-blocking-time"]
-            ),
-            cumulativeLayoutShift: this.extractMetric(
-              audits["cumulative-layout-shift"]
-            ),
+            interactive: extractMetric(audits["interactive"]),
+            totalBlockingTime: extractMetric(audits["total-blocking-time"]),
+            cumulativeLayoutShift:
+              audits["cumulative-layout-shift"]?.displayValue ?? null,
           },
         };
       });
 
-      const desktopResult = results.find((r) => r.strategy === "desktop") || null;
+      const desktopResult =
+        results.find((r) => r.strategy === "desktop") || null;
       const mobileResult = results.find((r) => r.strategy === "mobile") || null;
 
-      // Provide a top-level aggregated scores object (prefer desktop, then mobile)
       const aggregatedScores = {
-        performance: desktopResult?.scores?.performance ?? mobileResult?.scores?.performance ?? null,
-        accessibility: desktopResult?.scores?.accessibility ?? mobileResult?.scores?.accessibility ?? null,
-        bestPractices: desktopResult?.scores?.bestPractices ?? mobileResult?.scores?.bestPractices ?? null,
+        performance:
+          desktopResult?.scores?.performance ??
+          mobileResult?.scores?.performance ??
+          null,
+        accessibility:
+          desktopResult?.scores?.accessibility ??
+          mobileResult?.scores?.accessibility ??
+          null,
+        bestPractices:
+          desktopResult?.scores?.bestPractices ??
+          mobileResult?.scores?.bestPractices ??
+          null,
         seo: desktopResult?.scores?.seo ?? mobileResult?.scores?.seo ?? null,
       };
 
@@ -231,7 +247,10 @@ class SeoService {
     return {
       title: audit.title,
       displayValue: audit.displayValue || "N/A",
-      score: audit.score !== null && audit.score !== undefined ? Math.round(audit.score * 100) : null,
+      score:
+        audit.score !== null && audit.score !== undefined
+          ? Math.round(audit.score * 100)
+          : null,
     };
   }
 
