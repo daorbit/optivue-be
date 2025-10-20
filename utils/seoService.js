@@ -1,11 +1,11 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+const axios = require("axios");
+const cheerio = require("cheerio");
 
 class SeoService {
   async analyzeUrl(url) {
     try {
-      if (!url || !url.startsWith('http')) {
-        throw new Error('Invalid URL provided');
+      if (!url || !url.startsWith("http")) {
+        throw new Error("Invalid URL provided");
       }
 
       const results = {
@@ -13,7 +13,7 @@ class SeoService {
         meta: {},
         performance: {},
         technical: {},
-        content: {}
+        content: {},
       };
 
       const pageData = await this.getPageData(url);
@@ -27,13 +27,13 @@ class SeoService {
 
       return {
         success: true,
-        data: results
+        data: results,
       };
     } catch (error) {
-      console.error('SEO analysis error:', error);
+      console.error("SEO analysis error:", error);
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -43,8 +43,9 @@ class SeoService {
       const response = await axios.get(url, {
         timeout: 10000,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
       });
 
       const $ = cheerio.load(response.data);
@@ -54,12 +55,15 @@ class SeoService {
       const images = this.extractAllImages($, url);
 
       const content = {
-        h1Count: $('h1').length,
-        h2Count: $('h2').length,
-        h3Count: $('h3').length,
-        imgCount: $('img').length,
-        linkCount: $('a').length,
-        wordCount: $('body').text().split(/\s+/).filter(word => word.length > 0).length,
+        h1Count: $("h1").length,
+        h2Count: $("h2").length,
+        h3Count: $("h3").length,
+        imgCount: $("img").length,
+        linkCount: $("a").length,
+        wordCount: $("body")
+          .text()
+          .split(/\s+/)
+          .filter((word) => word.length > 0).length,
         hasSchema: $('script[type="application/ld+json"]').length > 0,
         schemaTypes: this.extractSchemaTypes($),
         schemas: schemas,
@@ -69,7 +73,7 @@ class SeoService {
         headingStructure: this.analyzeHeadingStructure($),
         keywordDensity: this.calculateKeywordDensity($),
         readabilityScore: this.calculateReadabilityScore($),
-        contentQuality: this.analyzeContentQuality($)
+        contentQuality: this.analyzeContentQuality($),
       };
 
       return { meta, content };
@@ -78,47 +82,133 @@ class SeoService {
     }
   }
 
+  // async getPageSpeedInsights(url) {
+  //   try {
+  //     const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
+  //     if (!apiKey) {
+  //       return {
+  //         note: "Google PageSpeed API key not configured",
+  //         scores: {},
+  //       };
+  //     }
+
+  //     const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
+  //       url
+  //     )}&strategy=mobile&key=${apiKey}&category=performance`;
+
+  //     const response = await axios.get(apiUrl, { timeout: 30000 });
+
+  //     const data = response.data;
+  //     const lighthouse = data.lighthouseResult;
+
+  //     return {
+  //       overallScore: lighthouse.categories.performance.score * 100,
+  //       scores: {
+  //         performance: lighthouse.categories.performance.score * 100,
+  //         accessibility: lighthouse.categories.accessibility.score * 100,
+  //         bestPractices: lighthouse.categories["best-practices"].score * 100,
+  //         seo: lighthouse.categories.seo.score * 100,
+  //       },
+  //       metrics: {
+  //         firstContentfulPaint: this.extractMetric(
+  //           lighthouse.audits["first-contentful-paint"]
+  //         ),
+  //         speedIndex: this.extractMetric(lighthouse.audits["speed-index"]),
+  //         largestContentfulPaint: this.extractMetric(
+  //           lighthouse.audits["largest-contentful-paint"]
+  //         ),
+  //         interactive: this.extractMetric(lighthouse.audits["interactive"]),
+  //         totalBlockingTime: this.extractMetric(
+  //           lighthouse.audits["total-blocking-time"]
+  //         ),
+  //         cumulativeLayoutShift: this.extractMetric(
+  //           lighthouse.audits["cumulative-layout-shift"]
+  //         ),
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error("PageSpeed Insights error:", error);
+  //     return {
+  //       error: "Failed to fetch PageSpeed data",
+  //       scores: {},
+  //     };
+  //   }
+  // }
+
   async getPageSpeedInsights(url) {
     try {
       const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
       if (!apiKey) {
         return {
-          note: 'Google PageSpeed API key not configured',
-          scores: {}
+          note: "Google PageSpeed API key not configured",
+          scores: {},
         };
       }
 
-      const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile&key=${apiKey}&category=performance`;
+      const strategies = ["mobile", "desktop"];
+      const requests = strategies.map((strategy) =>
+        axios.get(
+          `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
+            url
+          )}&strategy=${strategy}&category=performance&key=${apiKey}`,
+          { timeout: 30000 }
+        )
+      );
 
-      const response = await axios.get(apiUrl, { timeout: 30000 });
+      const responses = await Promise.all(requests);
 
-      const data = response.data;
-      const lighthouse = data.lighthouseResult;
+      const results = responses.map((res, i) => {
+        const lighthouse = res.data.lighthouseResult;
+        const audits = lighthouse.audits;
+
+        return {
+          strategy: strategies[i],
+          overallScore: (lighthouse.categories.performance.score * 100).toFixed(
+            0
+          ),
+          metrics: {
+            firstContentfulPaint: this.extractMetric(
+              audits["first-contentful-paint"]
+            ),
+            speedIndex: this.extractMetric(audits["speed-index"]),
+            largestContentfulPaint: this.extractMetric(
+              audits["largest-contentful-paint"]
+            ),
+            interactive: this.extractMetric(audits["interactive"]),
+            totalBlockingTime: this.extractMetric(
+              audits["total-blocking-time"]
+            ),
+            cumulativeLayoutShift: this.extractMetric(
+              audits["cumulative-layout-shift"]
+            ),
+          },
+        };
+      });
 
       return {
-        overallScore: lighthouse.categories.performance.score * 100,
-        scores: {
-          performance: lighthouse.categories.performance.score * 100,
-          accessibility: lighthouse.categories.accessibility.score * 100,
-          bestPractices: lighthouse.categories['best-practices'].score * 100,
-          seo: lighthouse.categories.seo.score * 100
-        },
-        metrics: {
-          firstContentfulPaint: this.extractMetric(lighthouse.audits['first-contentful-paint']),
-          speedIndex: this.extractMetric(lighthouse.audits['speed-index']),
-          largestContentfulPaint: this.extractMetric(lighthouse.audits['largest-contentful-paint']),
-          interactive: this.extractMetric(lighthouse.audits['interactive']),
-          totalBlockingTime: this.extractMetric(lighthouse.audits['total-blocking-time']),
-          cumulativeLayoutShift: this.extractMetric(lighthouse.audits['cumulative-layout-shift'])
-        }
+        url,
+        desktop: results.find((r) => r.strategy === "desktop"),
+        mobile: results.find((r) => r.strategy === "mobile"),
       };
     } catch (error) {
-      console.error('PageSpeed Insights error:', error);
+      console.error(
+        "PageSpeed Insights error:",
+        error?.response?.data || error.message
+      );
       return {
-        error: 'Failed to fetch PageSpeed data',
-        scores: {}
+        error: "Failed to fetch PageSpeed data",
+        scores: {},
       };
     }
+  }
+
+  extractMetric(audit) {
+    if (!audit) return null;
+    return {
+      title: audit.title,
+      displayValue: audit.displayValue || "N/A",
+      score: audit.score !== null ? (audit.score * 100).toFixed(0) : null,
+    };
   }
 
   extractSchemaTypes($) {
@@ -126,13 +216,13 @@ class SeoService {
     $('script[type="application/ld+json"]').each((i, elem) => {
       try {
         const schemaData = JSON.parse($(elem).html());
-        if (schemaData['@type']) {
-          schemas.push(schemaData['@type']);
-        } else if (schemaData['@graph']) {
+        if (schemaData["@type"]) {
+          schemas.push(schemaData["@type"]);
+        } else if (schemaData["@graph"]) {
           // Handle schema.org graph format
-          schemaData['@graph'].forEach(item => {
-            if (item['@type']) {
-              schemas.push(item['@type']);
+          schemaData["@graph"].forEach((item) => {
+            if (item["@type"]) {
+              schemas.push(item["@type"]);
             }
           });
         }
@@ -146,9 +236,14 @@ class SeoService {
   countInternalLinks($, baseUrl) {
     const baseDomain = new URL(baseUrl).hostname;
     let count = 0;
-    $('a[href]').each((i, elem) => {
-      const href = $(elem).attr('href');
-      if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+    $("a[href]").each((i, elem) => {
+      const href = $(elem).attr("href");
+      if (
+        href &&
+        !href.startsWith("http") &&
+        !href.startsWith("mailto:") &&
+        !href.startsWith("tel:")
+      ) {
         count++;
       } else if (href && href.includes(baseDomain)) {
         count++;
@@ -160,9 +255,9 @@ class SeoService {
   countExternalLinks($, baseUrl) {
     const baseDomain = new URL(baseUrl).hostname;
     let count = 0;
-    $('a[href]').each((i, elem) => {
-      const href = $(elem).attr('href');
-      if (href && href.startsWith('http') && !href.includes(baseDomain)) {
+    $("a[href]").each((i, elem) => {
+      const href = $(elem).attr("href");
+      if (href && href.startsWith("http") && !href.includes(baseDomain)) {
         count++;
       }
     });
@@ -174,7 +269,13 @@ class SeoService {
     for (let i = 1; i <= 6; i++) {
       const count = $(`h${i}`).length;
       if (count > 0) {
-        headings.push({ level: i, count, texts: $(`h${i}`).map((i, el) => $(el).text().trim()).get() });
+        headings.push({
+          level: i,
+          count,
+          texts: $(`h${i}`)
+            .map((i, el) => $(el).text().trim())
+            .get(),
+        });
       }
     }
     return headings;
@@ -185,26 +286,27 @@ class SeoService {
       const response = await axios.get(url, {
         timeout: 10000,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
       });
 
       const $ = cheerio.load(response.data);
 
       return {
         statusCode: response.status,
-        contentType: response.headers['content-type'] || '',
-        contentLength: response.headers['content-length'] || '',
-        server: response.headers['server'] || '',
-        hasHttps: url.startsWith('https'),
+        contentType: response.headers["content-type"] || "",
+        contentLength: response.headers["content-length"] || "",
+        server: response.headers["server"] || "",
+        hasHttps: url.startsWith("https"),
         hasMobileViewport: $('meta[name="viewport"]').length > 0,
         hasFavicon: $('link[rel="icon"], link[rel="shortcut icon"]').length > 0,
         hasOpenGraph: $('meta[property^="og:"]').length > 0,
         hasTwitterCards: $('meta[name^="twitter:"]').length > 0,
         hasStructuredData: $('script[type="application/ld+json"]').length > 0,
-        imageAltCount: $('img[alt]').length,
-        totalImages: $('img').length,
-        missingAltImages: $('img:not([alt])').length
+        imageAltCount: $("img[alt]").length,
+        totalImages: $("img").length,
+        missingAltImages: $("img:not([alt])").length,
       };
     } catch (error) {
       throw new Error(`Failed to get technical data: ${error.message}`);
@@ -213,39 +315,42 @@ class SeoService {
 
   extractAllMetaTags($) {
     const metaTags = {
-      title: $('title').text().trim(),
+      title: $("title").text().trim(),
       // Standard meta tags
-      description: $('meta[name="description"]').attr('content') || '',
-      keywords: $('meta[name="keywords"]').attr('content') || '',
-      author: $('meta[name="author"]').attr('content') || '',
-      robots: $('meta[name="robots"]').attr('content') || '',
-      viewport: $('meta[name="viewport"]').attr('content') || '',
-      charset: $('meta[charset]').attr('charset') || '',
+      description: $('meta[name="description"]').attr("content") || "",
+      keywords: $('meta[name="keywords"]').attr("content") || "",
+      author: $('meta[name="author"]').attr("content") || "",
+      robots: $('meta[name="robots"]').attr("content") || "",
+      viewport: $('meta[name="viewport"]').attr("content") || "",
+      charset: $("meta[charset]").attr("charset") || "",
       // Open Graph tags
-      ogTitle: $('meta[property="og:title"]').attr('content') || '',
-      ogDescription: $('meta[property="og:description"]').attr('content') || '',
-      ogImage: $('meta[property="og:image"]').attr('content') || '',
-      ogUrl: $('meta[property="og:url"]').attr('content') || '',
-      ogType: $('meta[property="og:type"]').attr('content') || '',
-      ogSiteName: $('meta[property="og:site_name"]').attr('content') || '',
+      ogTitle: $('meta[property="og:title"]').attr("content") || "",
+      ogDescription: $('meta[property="og:description"]').attr("content") || "",
+      ogImage: $('meta[property="og:image"]').attr("content") || "",
+      ogUrl: $('meta[property="og:url"]').attr("content") || "",
+      ogType: $('meta[property="og:type"]').attr("content") || "",
+      ogSiteName: $('meta[property="og:site_name"]').attr("content") || "",
       // Twitter Card tags
-      twitterTitle: $('meta[name="twitter:title"]').attr('content') || '',
-      twitterDescription: $('meta[name="twitter:description"]').attr('content') || '',
-      twitterImage: $('meta[name="twitter:image"]').attr('content') || '',
-      twitterCard: $('meta[name="twitter:card"]').attr('content') || '',
-      twitterSite: $('meta[name="twitter:site"]').attr('content') || '',
+      twitterTitle: $('meta[name="twitter:title"]').attr("content") || "",
+      twitterDescription:
+        $('meta[name="twitter:description"]').attr("content") || "",
+      twitterImage: $('meta[name="twitter:image"]').attr("content") || "",
+      twitterCard: $('meta[name="twitter:card"]').attr("content") || "",
+      twitterSite: $('meta[name="twitter:site"]').attr("content") || "",
       // Link tags
-      canonical: $('link[rel="canonical"]').attr('href') || '',
-      favicon: $('link[rel="icon"], link[rel="shortcut icon"]').attr('href') || '',
+      canonical: $('link[rel="canonical"]').attr("href") || "",
+      favicon:
+        $('link[rel="icon"], link[rel="shortcut icon"]').attr("href") || "",
       // All other meta tags
-      allMetaTags: []
+      allMetaTags: [],
     };
 
     // Extract all meta tags
-    $('meta').each((i, elem) => {
+    $("meta").each((i, elem) => {
       const tag = $(elem);
-      const name = tag.attr('name') || tag.attr('property') || tag.attr('http-equiv');
-      const content = tag.attr('content');
+      const name =
+        tag.attr("name") || tag.attr("property") || tag.attr("http-equiv");
+      const content = tag.attr("content");
       if (name && content) {
         metaTags.allMetaTags.push({ name, content });
       }
@@ -262,7 +367,7 @@ class SeoService {
         schemas.push(schemaData);
       } catch (e) {
         // Invalid JSON, skip
-        console.warn('Invalid JSON-LD schema found:', e.message);
+        console.warn("Invalid JSON-LD schema found:", e.message);
       }
     });
     return schemas;
@@ -270,20 +375,20 @@ class SeoService {
 
   extractAllImages($, baseUrl) {
     const images = [];
-    $('img').each((i, elem) => {
+    $("img").each((i, elem) => {
       const img = $(elem);
-      const src = img.attr('src');
-      const alt = img.attr('alt') || '';
-      const title = img.attr('title') || '';
-      const width = img.attr('width');
-      const height = img.attr('height');
-      const loading = img.attr('loading') || '';
-      const decoding = img.attr('decoding') || '';
+      const src = img.attr("src");
+      const alt = img.attr("alt") || "";
+      const title = img.attr("title") || "";
+      const width = img.attr("width");
+      const height = img.attr("height");
+      const loading = img.attr("loading") || "";
+      const decoding = img.attr("decoding") || "";
 
       if (src) {
         // Resolve relative URLs
         let absoluteSrc = src;
-        if (!src.startsWith('http')) {
+        if (!src.startsWith("http")) {
           try {
             absoluteSrc = new URL(src, baseUrl).href;
           } catch (e) {
@@ -299,7 +404,7 @@ class SeoService {
           height: height ? parseInt(height) : null,
           loading,
           decoding,
-          hasAlt: !!alt
+          hasAlt: !!alt,
         });
       }
     });
@@ -308,54 +413,57 @@ class SeoService {
 
   calculateKeywordDensity($) {
     // Simple keyword density calculation
-    const text = $('body').text().toLowerCase();
-    const words = text.split(/\s+/).filter(word => word.length > 3);
+    const text = $("body").text().toLowerCase();
+    const words = text.split(/\s+/).filter((word) => word.length > 3);
     const wordCount = words.length;
-    
+
     if (wordCount === 0) return {};
-    
+
     const wordFreq = {};
-    words.forEach(word => {
+    words.forEach((word) => {
       wordFreq[word] = (wordFreq[word] || 0) + 1;
     });
-    
+
     // Get top 10 keywords
     const sortedWords = Object.entries(wordFreq)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
       .map(([word, count]) => ({
         word,
         count,
-        density: (count / wordCount * 100).toFixed(2) + '%'
+        density: ((count / wordCount) * 100).toFixed(2) + "%",
       }));
-    
+
     return sortedWords;
   }
 
   calculateReadabilityScore($) {
     // Simple readability score based on sentence and word count
-    const text = $('body').text();
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    const words = text.split(/\s+/).filter(word => word.length > 0);
-    
+    const text = $("body").text();
+    const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+    const words = text.split(/\s+/).filter((word) => word.length > 0);
+
     if (sentences.length === 0 || words.length === 0) return 0;
-    
+
     const avgWordsPerSentence = words.length / sentences.length;
-    const avgSyllablesPerWord = words.reduce((sum, word) => sum + this.countSyllables(word), 0) / words.length;
-    
+    const avgSyllablesPerWord =
+      words.reduce((sum, word) => sum + this.countSyllables(word), 0) /
+      words.length;
+
     // Simplified Flesch Reading Ease formula
-    const score = 206.835 - (1.015 * avgWordsPerSentence) - (84.6 * avgSyllablesPerWord);
+    const score =
+      206.835 - 1.015 * avgWordsPerSentence - 84.6 * avgSyllablesPerWord;
     return Math.max(0, Math.min(100, score));
   }
 
   countSyllables(word) {
     word = word.toLowerCase();
     if (word.length <= 3) return 1;
-    
-    const vowels = 'aeiouy';
+
+    const vowels = "aeiouy";
     let syllableCount = 0;
     let previousWasVowel = false;
-    
+
     for (let i = 0; i < word.length; i++) {
       const isVowel = vowels.includes(word[i]);
       if (isVowel && !previousWasVowel) {
@@ -363,37 +471,39 @@ class SeoService {
       }
       previousWasVowel = isVowel;
     }
-    
-    if (word.endsWith('e')) syllableCount--;
+
+    if (word.endsWith("e")) syllableCount--;
     return Math.max(1, syllableCount);
   }
 
   analyzeContentQuality($) {
-    const text = $('body').text();
-    const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    
+    const text = $("body").text();
+    const wordCount = text
+      .split(/\s+/)
+      .filter((word) => word.length > 0).length;
+    const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+
     let score = 0;
-    
+
     // Word count score
     if (wordCount > 300) score += 30;
     else if (wordCount > 150) score += 20;
     else if (wordCount > 50) score += 10;
-    
+
     // Sentence variety
     if (sentences.length > 5) score += 20;
-    
+
     // Has headings
-    if ($('h1, h2, h3').length > 0) score += 20;
-    
+    if ($("h1, h2, h3").length > 0) score += 20;
+
     // Has images with alt text
-    const imagesWithAlt = $('img[alt]').length;
-    const totalImages = $('img').length;
+    const imagesWithAlt = $("img[alt]").length;
+    const totalImages = $("img").length;
     if (totalImages > 0 && imagesWithAlt / totalImages > 0.5) score += 15;
-    
+
     // Has links
-    if ($('a').length > 3) score += 15;
-    
+    if ($("a").length > 3) score += 15;
+
     return Math.min(100, score);
   }
 }
