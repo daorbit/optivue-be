@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { analyzeUrl } from '../controllers/seoController.js';
+import authMiddleware from '../middleware/auth.js';
+
 const router = express.Router();
-const seoController = require('../controllers/seoController');
-const auth = require('../middleware/auth');
 
-router.post('/analyze', auth, seoController.analyzeUrl);
+router.post('/analyze', authMiddleware, analyzeUrl);
 
-module.exports = router;
+export default router;

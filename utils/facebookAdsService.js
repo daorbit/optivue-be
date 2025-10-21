@@ -1,4 +1,4 @@
-const FB = require('fb');
+import * as FB from 'fb';
 
 class FacebookAdsService {
   constructor() {
@@ -358,4 +358,4 @@ class FacebookAdsService {
   }
 }
 
-module.exports = new FacebookAdsService();
+export default new FacebookAdsService();

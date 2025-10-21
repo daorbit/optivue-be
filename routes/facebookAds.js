@@ -1,6 +1,12 @@
-const express = require('express');
-const facebookAdsController = require('../controllers/facebookAdsController');
-const authMiddleware = require('../middleware/auth');
+import express from 'express';
+import { 
+  getAdAccount, 
+  getCampaigns, 
+  getInsights, 
+  getAdsOverview, 
+  getCampaignCreatives 
+} from '../controllers/facebookAdsController.js';
+import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -8,18 +14,18 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // Get ad account information
-router.get('/facebook-ads/account', facebookAdsController.getAdAccount);
+router.get('/facebook-ads/account', getAdAccount);
 
 // Get campaigns
-router.get('/facebook-ads/campaigns', facebookAdsController.getCampaigns);
+router.get('/facebook-ads/campaigns', getCampaigns);
 
 // Get insights/stats
-router.get('/facebook-ads/insights', facebookAdsController.getInsights);
+router.get('/facebook-ads/insights', getInsights);
 
 // Get ads overview (account + insights combined)
-router.get('/facebook-ads/overview', facebookAdsController.getAdsOverview);
+router.get('/facebook-ads/overview', getAdsOverview);
 
 // Get campaign creatives with media
-router.get('/facebook-ads/campaigns/:campaignId/creatives', facebookAdsController.getCampaignCreatives);
+router.get('/facebook-ads/campaigns/:campaignId/creatives', getCampaignCreatives);
 
-module.exports = router;
+export default router;

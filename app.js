@@ -1,19 +1,19 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const indexRouter = require('./routes/index');
-const authRouter = require('./routes/auth');
-const accountRouter = require('./routes/account');
-const facebookAdsRouter = require('./routes/facebookAds');
-const seoRouter = require('./routes/seo');
-const logger = require('./middleware/logger');
-require('dotenv').config();
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import indexRouter from './routes/index.js';
+import authRouter from './routes/auth.js';
+import accountRouter from './routes/account.js';
+import facebookAdsRouter from './routes/facebookAds.js';
+import seoRouter from './routes/seo.js';
+import logger from './middleware/logger.js';
+
+dotenv.config();
 
 const app = express();
 
 mongoose.connect(process.env.MONGODB_URI)
-
-
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
 
@@ -47,4 +47,4 @@ if (!process.env.VERCEL) {
   });
 }
 
-module.exports = app;
+export default app;

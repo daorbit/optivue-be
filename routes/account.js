@@ -1,7 +1,7 @@
-const express = require('express');
-const { body } = require('express-validator');
-const accountController = require('../controllers/accountController');
-const authMiddleware = require('../middleware/auth');
+import express from 'express';
+import { body } from 'express-validator';
+import { getAccount, updateAccount } from '../controllers/accountController.js';
+import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -37,7 +37,7 @@ const updateValidation = [
 ];
 
 // Routes
-router.get('/account', authMiddleware, accountController.getAccount);
-router.put('/account', authMiddleware, updateValidation, accountController.updateAccount);
+router.get('/account', authMiddleware, getAccount);
+router.put('/account', authMiddleware, updateValidation, updateAccount);
 
-module.exports = router;
+export default router;

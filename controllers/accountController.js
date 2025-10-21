@@ -1,82 +1,54 @@
-const User = require('../models/User');
-const { validationResult } = require('express-validator');
+import BaseController from './BaseController.js';
+import { sendSuccess } from '../utils/responseHelpers.js';
+import { findUserFromRequest, formatUserResponse } from '../utils/authHelpers.js';
 
-// Get account info
-exports.getAccount = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId).select('-password');
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        applications: user.applications,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }
-    });
-  } catch (error) {
-    console.error('Get account error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+/**
+ * Account Controller
+ * Handles user account operations
+ */
+class AccountController extends BaseController {
+  constructor() {
+    super();
+    this.bindMethods(['getAccount', 'updateAccount']);
   }
-};
 
-// Update account info
-exports.updateAccount = async (req, res) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+  /**
+   * Get account information
+   */
+  async getAccount(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const user = await findUserFromRequest(req, res);
+      if (!user) return; // Error already sent by findUserFromRequest
 
-    const { username, applications } = req.body;
-
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Update fields if provided (email cannot be updated)
-    if (username !== undefined) user.username = username;
-    if (applications !== undefined) user.applications = applications;
-
-    await user.save();
-
-    res.json({
-      success: true,
-      message: 'Account updated successfully',
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        applications: user.applications,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }
-    });
-  } catch (error) {
-    console.error('Update account error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+      sendSuccess(res, { user: formatUserResponse(user) });
+    }, req, res, 'Server error retrieving account');
   }
-};
+
+  /**
+   * Update account information
+   */
+  async updateAccount(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { username, applications } = req.body;
+
+      const user = await findUserFromRequest(req, res);
+      if (!user) return; // Error already sent by findUserFromRequest
+
+      // Update fields if provided (email cannot be updated)
+      if (username !== undefined) user.username = username;
+      if (applications !== undefined) user.applications = applications;
+
+      await user.save();
+
+      sendSuccess(res, { 
+        user: formatUserResponse(user) 
+      }, 'Account updated successfully');
+    }, req, res, 'Server error updating account');
+  }
+}
+
+// Create instance and export methods
+const accountController = new AccountController();
+
+export const getAccount = accountController.getAccount;
+export const updateAccount = accountController.updateAccount;

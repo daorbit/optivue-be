@@ -1,43 +1,58 @@
-const seoService = require('../utils/seoService');
+import BaseController from './BaseController.js';
+import { sendSuccess, sendError } from '../utils/responseHelpers.js';
+import seoService from '../utils/seoService.js';
 
-exports.analyzeUrl = async (req, res) => {
-  try {
-    const { url } = req.body;
+/**
+ * SEO Controller
+ * Handles SEO analysis operations
+ */
+class SeoController extends BaseController {
+  constructor() {
+    super();
+    this.bindMethods(['analyzeUrl']);
+  }
 
-    if (!url) {
-      return res.status(400).json({
-        success: false,
-        message: 'URL is required'
-      });
-    }
-
+  /**
+   * Validate URL format
+   * @param {string} url - URL to validate
+   * @returns {boolean} - True if valid, false otherwise
+   */
+  isValidUrl(url) {
     try {
       new URL(url);
+      return true;
     } catch (error) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid URL format'
-      });
+      return false;
     }
-
-    const result = await seoService.analyzeUrl(url);
-
-    if (!result.success) {
-      return res.status(400).json({
-        success: false,
-        message: result.error
-      });
-    }
-
-    res.json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    console.error('SEO analysis error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during SEO analysis'
-    });
   }
-};
+
+  /**
+   * Analyze URL for SEO metrics
+   */
+  async analyzeUrl(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { url } = req.body;
+
+      if (!url) {
+        return sendError(res, 'URL is required', 400);
+      }
+
+      if (!this.isValidUrl(url)) {
+        return sendError(res, 'Invalid URL format', 400);
+      }
+
+      const result = await seoService.analyzeUrl(url);
+
+      if (!result.success) {
+        return sendError(res, result.error, 400);
+      }
+
+      sendSuccess(res, result.data);
+    }, req, res, 'Server error during SEO analysis');
+  }
+}
+
+// Create instance and export methods
+const seoController = new SeoController();
+
+export const analyzeUrl = seoController.analyzeUrl;

@@ -1,7 +1,7 @@
-const express = require('express');
-const { body } = require('express-validator');
-const authController = require('../controllers/authController');
-const authMiddleware = require('../middleware/auth');
+import express from 'express';
+import { body } from 'express-validator';
+import { signup, login, getProfile } from '../controllers/authController.js';
+import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -33,8 +33,8 @@ const loginValidation = [
 ];
 
 // Routes
-router.post('/signup', signupValidation, authController.signup);
-router.post('/login', loginValidation, authController.login);
-router.get('/profile', authMiddleware, authController.getProfile);
+router.post('/signup', signupValidation, signup);
+router.post('/login', loginValidation, login);
+router.get('/profile', authMiddleware, getProfile);
 
-module.exports = router;
+export default router;

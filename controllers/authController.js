@@ -1,147 +1,129 @@
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-const { validationResult } = require('express-validator');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import BaseController from './BaseController.js';
+import { sendSuccess, sendError, sendUnauthorized } from '../utils/responseHelpers.js';
+import { findUserFromRequest } from '../utils/authHelpers.js';
 
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'your-secret-key', {
-    expiresIn: '7d'
-  });
-};
+/**
+ * Authentication Controller
+ * Handles user registration, login, and profile operations
+ */
+class AuthController extends BaseController {
+  constructor() {
+    super();
+    this.bindMethods(['signup', 'login', 'getProfile']);
+  }
 
-// Signup controller
-exports.signup = async (req, res) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+  /**
+   * Generate JWT token for user
+   * @param {string} userId - User ID
+   * @returns {string} - JWT token
+   */
+  generateToken(userId) {
+    return jwt.sign({ userId }, process.env.JWT_SECRET || 'your-secret-key', {
+      expiresIn: '7d'
+    });
+  }
 
-    const { username, email, password } = req.body;
+  /**
+   * Format user data for response
+   * @param {Object} user - User object
+   * @returns {Object} - Formatted user data
+   */
+  formatUserData(user) {
+    return {
+      id: user._id,
+      username: user.username,
+      email: user.email
+    };
+  }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({
+  /**
+   * Check if user already exists
+   * @param {string} email - User email
+   * @param {string} username - Username
+   * @returns {Object|null} - Existing user or null
+   */
+  async checkExistingUser(email, username) {
+    return await User.findOne({
       $or: [{ email }, { username }]
     });
+  }
 
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User with this email or username already exists'
-      });
-    }
+  /**
+   * User signup
+   */
+  async signup(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { username, email, password } = req.body;
 
-    // Create new user
-    const user = new User({
-      username,
-      email,
-      password
-    });
-
-    await user.save();
-
-    // Generate token
-    const token = generateToken(user._id);
-
-    res.status(201).json({
-      success: true,
-      message: 'User created successfully',
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
+      // Check if user already exists
+      const existingUser = await this.checkExistingUser(email, username);
+      if (existingUser) {
+        return sendError(res, 'User with this email or username already exists', 400);
       }
-    });
 
-  } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during signup'
-    });
+      // Create new user
+      const user = new User({ username, email, password });
+      await user.save();
+
+      // Generate token
+      const token = this.generateToken(user._id);
+
+      sendSuccess(res, {
+        token,
+        user: this.formatUserData(user)
+      }, 'User created successfully', 201);
+    }, req, res, 'Server error during signup');
   }
-};
 
-// Login controller
-exports.login = async (req, res) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
+  /**
+   * User login
+   */
+  async login(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { email, password } = req.body;
 
-    const { email, password } = req.body;
-
-    // Find user by email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Check password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Generate token
-    const token = generateToken(user._id);
-
-    res.json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
+      // Find user by email
+      const user = await User.findOne({ email });
+      if (!user) {
+        return sendUnauthorized(res, 'Invalid email or password');
       }
-    });
 
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during login'
-    });
+      // Check password
+      const isPasswordValid = await user.comparePassword(password);
+      if (!isPasswordValid) {
+        return sendUnauthorized(res, 'Invalid email or password');
+      }
+
+      // Generate token
+      const token = this.generateToken(user._id);
+
+      sendSuccess(res, {
+        token,
+        user: this.formatUserData(user)
+      }, 'Login successful');
+    }, req, res, 'Server error during login');
   }
-};
 
-// Get current user profile (protected route)
-exports.getProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId).select('-password');
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
+  /**
+   * Get current user profile (protected route)
+   */
+  async getProfile(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const user = await findUserFromRequest(req, res);
+      if (!user) return; // Error already sent by findUserFromRequest
 
-    res.json({
-      success: true,
-      user
-    });
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+      // Remove password from response
+      const userData = await User.findById(user._id).select('-password');
+      sendSuccess(res, { user: userData });
+    }, req, res, 'Server error retrieving profile');
   }
-};
+}
+
+// Create instance and export methods
+const authController = new AuthController();
+
+export const signup = authController.signup;
+export const login = authController.login;
+export const getProfile = authController.getProfile;
