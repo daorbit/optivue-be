@@ -83,59 +83,7 @@ class SeoService {
     }
   }
 
-  // async getPageSpeedInsights(url) {
-  //   try {
-  //     const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
-  //     if (!apiKey) {
-  //       return {
-  //         note: "Google PageSpeed API key not configured",
-  //         scores: {},
-  //       };
-  //     }
-
-  //     const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
-  //       url
-  //     )}&strategy=mobile&key=${apiKey}&category=performance`;
-
-  //     const response = await axios.get(apiUrl, { timeout: 30000 });
-
-  //     const data = response.data;
-  //     const lighthouse = data.lighthouseResult;
-
-  //     return {
-  //       overallScore: lighthouse.categories.performance.score * 100,
-  //       scores: {
-  //         performance: lighthouse.categories.performance.score * 100,
-  //         accessibility: lighthouse.categories.accessibility.score * 100,
-  //         bestPractices: lighthouse.categories["best-practices"].score * 100,
-  //         seo: lighthouse.categories.seo.score * 100,
-  //       },
-  //       metrics: {
-  //         firstContentfulPaint: this.extractMetric(
-  //           lighthouse.audits["first-contentful-paint"]
-  //         ),
-  //         speedIndex: this.extractMetric(lighthouse.audits["speed-index"]),
-  //         largestContentfulPaint: this.extractMetric(
-  //           lighthouse.audits["largest-contentful-paint"]
-  //         ),
-  //         interactive: this.extractMetric(lighthouse.audits["interactive"]),
-  //         totalBlockingTime: this.extractMetric(
-  //           lighthouse.audits["total-blocking-time"]
-  //         ),
-  //         cumulativeLayoutShift: this.extractMetric(
-  //           lighthouse.audits["cumulative-layout-shift"]
-  //         ),
-  //       },
-  //     };
-  //   } catch (error) {
-  //     console.error("PageSpeed Insights error:", error);
-  //     return {
-  //       error: "Failed to fetch PageSpeed data",
-  //       scores: {},
-  //     };
-  //   }
-  // }
-
+  
   async getPageSpeedInsights(url) {
   try {
     const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
@@ -162,7 +110,7 @@ class SeoService {
         )}&strategy=${strategy}&${categories
           .map((c) => `category=${c}`)
           .join("&")}&key=${apiKey}`,
-        { timeout: 30000 }
+        { timeout: 300000 }
       )
     );
 
