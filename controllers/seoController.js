@@ -142,6 +142,7 @@ class SeoController extends BaseController {
   async analyzeUrl(req, res) {
     await this.executeWithErrorHandling(async (req, res) => {
       const { url } = req.body;
+      const { nocaching } = req.query; // Get nocaching query parameter
 
       if (!url) {
         return sendError(res, 'URL is required', 400);
@@ -153,19 +154,33 @@ class SeoController extends BaseController {
         return sendError(res, 'Invalid URL format', 400);
       }
 
-      // Check server-side cache first
-      const cachedResult = this.getCachedResult(url);
-      if (cachedResult) {
-        // Set cache headers for browser caching
-        this.setCacheHeaders(res, url);
-        return sendSuccess(res, cachedResult);
+      // Check if caching should be bypassed
+      const bypassCache = nocaching === 'true' || nocaching === '1';
+
+      // Check server-side cache first (unless bypassing)
+      if (!bypassCache) {
+        const cachedResult = this.getCachedResult(url);
+        if (cachedResult) {
+          // Set cache headers for browser caching
+          this.setCacheHeaders(res, url);
+          return sendSuccess(res, cachedResult);
+        }
       }
 
-      // Set cache headers before processing
-      this.setCacheHeaders(res, url);
+      // Set cache headers before processing (unless bypassing cache)
+      if (!bypassCache) {
+        this.setCacheHeaders(res, url);
+      } else {
+        // Set no-cache headers when bypassing cache
+        res.set({
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        });
+      }
 
-      // Check if client has cached version (keeping for future GET requests)
-      if (this.shouldReturn304(req, res, url)) {
+      // Check if client has cached version (only if not bypassing cache)
+      if (!bypassCache && this.shouldReturn304(req, res, url)) {
         return res.status(304).end();
       }
 
@@ -176,8 +191,10 @@ class SeoController extends BaseController {
         return sendError(res, result.error, 400);
       }
 
-      // Cache the successful result
-      this.setCachedResult(url, result.data);
+      // Cache the successful result (unless bypassing cache)
+      if (!bypassCache) {
+        this.setCachedResult(url, result.data);
+      }
 
       sendSuccess(res, result.data);
     }, req, res, 'Server error during SEO analysis');
