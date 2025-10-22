@@ -110,7 +110,7 @@ class SeoService {
         )}&strategy=${strategy}&${categories
           .map((c) => `category=${c}`)
           .join("&")}&key=${apiKey}`,
-        { timeout: 300000 }
+        { timeout: 3000000 }
       )
     );
 
