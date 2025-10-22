@@ -239,10 +239,25 @@ Respond only with valid JSON, no additional text.`;
       try {
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        const text = response.text();
+        let text = response.text();
 
-        // Parse the JSON response
-        const suggestions = JSON.parse(text);
+        console.log('Gemini API raw response:', text);
+
+         text = text.trim();
+        if (text.startsWith('```json')) {
+          text = text.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (text.startsWith('```')) {
+          text = text.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+         let suggestions;
+        try {
+          suggestions = JSON.parse(text);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          console.error('Response text that failed to parse:', text);
+          return sendError(res, 'AI returned invalid response format', 500);
+        }
 
         sendSuccess(res, { suggestions });
       } catch (error) {
@@ -253,8 +268,7 @@ Respond only with valid JSON, no additional text.`;
   }
 }
 
-// Create instance and export methods
-const seoController = new SeoController();
+ const seoController = new SeoController();
 
 export const analyzeUrl = seoController.analyzeUrl;
 export const getAiSuggestions = seoController.getAiSuggestions;
