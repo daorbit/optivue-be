@@ -253,5 +253,8 @@ Respond only with valid JSON, no additional text.`;
   }
 }
 
+// Create instance and export methods
+const seoController = new SeoController();
+
 export const analyzeUrl = seoController.analyzeUrl;
 export const getAiSuggestions = seoController.getAiSuggestions;
