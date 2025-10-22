@@ -15,6 +15,7 @@ class SeoService {
         technical: {},
         content: {},
       };
+      
 
       const pageData = await this.getPageData(url);
       results.meta = pageData.meta;
