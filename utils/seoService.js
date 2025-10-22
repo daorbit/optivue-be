@@ -137,111 +137,211 @@ class SeoService {
   // }
 
   async getPageSpeedInsights(url) {
-    try {
-      const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
-      if (!apiKey) {
-        return {
-          note: "Google PageSpeed API key not configured",
-          scores: {},
-        };
-      }
-
-      const strategies = ["mobile", "desktop"];
-      const categories = [
-        "performance",
-        "accessibility",
-        "best-practices",
-        "seo",
-      ];
-
-      const requests = strategies.map((strategy) =>
-        axios.get(
-          `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
-            url
-          )}&strategy=${strategy}&${categories
-            .map((c) => `category=${c}`)
-            .join("&")}&key=${apiKey}`,
-          { timeout: 30000 }
-        )
-      );
-
-      const responses = await Promise.all(requests);
-
-      const results = responses.map((res, i) => {
-        const lighthouse = res.data.lighthouseResult || {};
-        const audits = lighthouse.audits || {};
-        const cats = lighthouse.categories || {};
-
-        const getScore = (cat) =>
-          cat?.score != null ? Math.round(cat.score * 100) : null;
-
-        const scores = {
-          performance: getScore(cats.performance),
-          accessibility: getScore(cats.accessibility),
-          bestPractices: getScore(cats["best-practices"]),
-          seo: getScore(cats.seo),
-        };
-
-        const extractMetric = (metric) =>
-          metric?.numericValue != null ? Math.round(metric.numericValue) : null;
-
-        return {
-          strategy: strategies[i],
-          overallScore: scores.performance,
-          scores,
-          metrics: {
-            firstContentfulPaint: extractMetric(
-              audits["first-contentful-paint"]
-            ),
-            speedIndex: extractMetric(audits["speed-index"]),
-            largestContentfulPaint: extractMetric(
-              audits["largest-contentful-paint"]
-            ),
-            interactive: extractMetric(audits["interactive"]),
-            totalBlockingTime: extractMetric(audits["total-blocking-time"]),
-            cumulativeLayoutShift:
-              audits["cumulative-layout-shift"]?.displayValue ?? null,
-          },
-        };
-      });
-
-      const desktopResult =
-        results.find((r) => r.strategy === "desktop") || null;
-      const mobileResult = results.find((r) => r.strategy === "mobile") || null;
-
-      const aggregatedScores = {
-        performance:
-          desktopResult?.scores?.performance ??
-          mobileResult?.scores?.performance ??
-          null,
-        accessibility:
-          desktopResult?.scores?.accessibility ??
-          mobileResult?.scores?.accessibility ??
-          null,
-        bestPractices:
-          desktopResult?.scores?.bestPractices ??
-          mobileResult?.scores?.bestPractices ??
-          null,
-        seo: desktopResult?.scores?.seo ?? mobileResult?.scores?.seo ?? null,
-      };
-
+  try {
+    const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
+    if (!apiKey) {
       return {
-        url,
-        desktop: desktopResult,
-        mobile: mobileResult,
-        scores: aggregatedScores,
-      };
-    } catch (error) {
-      console.error(
-        "PageSpeed Insights error:",
-        error?.response?.data || error.message
-      );
-      return {
-        error: "Failed to fetch PageSpeed data",
+        note: "Google PageSpeed API key not configured",
         scores: {},
+        suggestions: [],
       };
     }
+
+    const strategies = ["mobile", "desktop"];
+    const categories = [
+      "performance",
+      "accessibility",
+      "best-practices",
+      "seo",
+    ];
+
+    const requests = strategies.map((strategy) =>
+      axios.get(
+        `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
+          url
+        )}&strategy=${strategy}&${categories
+          .map((c) => `category=${c}`)
+          .join("&")}&key=${apiKey}`,
+        { timeout: 30000 }
+      )
+    );
+
+    const responses = await Promise.all(requests);
+
+    // Reusable helper to make human-readable suggestions
+    const getReadableAdvice = (id, audit) => {
+      const title = audit.title || "";
+      const desc = audit.description || "";
+
+      // Some handcrafted advice for common audits
+      const adviceMap = {
+        "uses-webp-images":
+          "Convert your images to WebP or AVIF format to reduce image size and improve load time.",
+        "uses-text-compression":
+          "Enable GZIP or Brotli compression on your server for text-based resources (HTML, CSS, JS).",
+        "render-blocking-resources":
+          "Defer non-critical CSS/JS or load them asynchronously to speed up first render.",
+        "unused-css-rules":
+          "Remove or split large CSS files. Only load the CSS needed for the above-the-fold content.",
+        "unused-javascript":
+          "Remove unused JS or lazy-load scripts used after interaction.",
+        "server-response-time":
+          "Optimize backend performance, caching, and database queries to reduce server response time.",
+        "uses-rel-preload":
+          "Preload key requests (like fonts or hero images) to prioritize critical assets.",
+        "uses-long-cache-ttl":
+          "Set longer cache lifetimes for static assets (at least 1 year).",
+        "meta-description":
+          "Add a relevant meta description tag for better search visibility.",
+        "viewport":
+          "Add a `<meta name='viewport'>` tag to improve mobile responsiveness.",
+        "is-crawlable":
+          "Ensure your robots.txt and meta tags allow search engines to crawl this page.",
+      };
+
+      const baseAdvice = adviceMap[id] || desc || title;
+
+      // Add estimated savings if available
+      const extra = [];
+      if (audit.details?.overallSavingsMs)
+        extra.push(
+          `Can save approximately ${Math.round(
+            audit.details.overallSavingsMs
+          )} ms of load time.`
+        );
+      if (audit.details?.overallSavingsBytes)
+        extra.push(
+          `Reduce total size by ~${Math.round(
+            audit.details.overallSavingsBytes / 1024
+          )} KB.`
+        );
+
+      return `${baseAdvice}${extra.length ? " " + extra.join(" ") : ""}`;
+    };
+
+    const results = responses.map((res, i) => {
+      const lighthouse = res.data.lighthouseResult || {};
+      const audits = lighthouse.audits || {};
+      const cats = lighthouse.categories || {};
+
+      const getScore = (cat) =>
+        cat?.score != null ? Math.round(cat.score * 100) : null;
+
+      const scores = {
+        performance: getScore(cats.performance),
+        accessibility: getScore(cats.accessibility),
+        bestPractices: getScore(cats["best-practices"]),
+        seo: getScore(cats.seo),
+      };
+
+      const extractMetric = (metric) =>
+        metric?.numericValue != null ? Math.round(metric.numericValue) : null;
+
+      const suggestions = Object.entries(audits)
+        .filter(
+          ([, audit]) =>
+            audit.score != null &&
+            audit.score < 0.9 &&
+            (audit.description || audit.details)
+        )
+        .map(([id, audit]) => {
+          const fixHints = [];
+
+          if (audit.details?.items?.length) {
+            audit.details.items.slice(0, 3).forEach((item) => {
+              if (item.url) fixHints.push(`Resource: ${item.url}`);
+              if (item.wastedBytes)
+                fixHints.push(
+                  `Reduce by ${Math.round(item.wastedBytes / 1024)} KB`
+                );
+              if (item.wastedMs)
+                fixHints.push(`Potential savings: ${Math.round(item.wastedMs)} ms`);
+            });
+          }
+
+          return {
+            id,
+            title: audit.title,
+            category:
+              Object.keys(cats).find((c) =>
+                cats[c]?.auditRefs?.some((ref) => ref.id === id)
+              ) || "general",
+            score: Math.round(audit.score * 100),
+            displayValue: audit.displayValue || null,
+            description: audit.description,
+            fixSuggestions: fixHints,
+            humanReadableAdvice: getReadableAdvice(id, audit),
+          };
+        });
+
+      return {
+        strategy: strategies[i],
+        scores,
+        metrics: {
+          firstContentfulPaint: extractMetric(audits["first-contentful-paint"]),
+          speedIndex: extractMetric(audits["speed-index"]),
+          largestContentfulPaint: extractMetric(
+            audits["largest-contentful-paint"]
+          ),
+          interactive: extractMetric(audits["interactive"]),
+          totalBlockingTime: extractMetric(audits["total-blocking-time"]),
+          cumulativeLayoutShift:
+            audits["cumulative-layout-shift"]?.displayValue ?? null,
+        },
+        suggestions,
+      };
+    });
+
+    const desktopResult = results.find((r) => r.strategy === "desktop") || null;
+    const mobileResult = results.find((r) => r.strategy === "mobile") || null;
+
+    const aggregatedScores = {
+      performance:
+        desktopResult?.scores?.performance ??
+        mobileResult?.scores?.performance ??
+        null,
+      accessibility:
+        desktopResult?.scores?.accessibility ??
+        mobileResult?.scores?.accessibility ??
+        null,
+      bestPractices:
+        desktopResult?.scores?.bestPractices ??
+        mobileResult?.scores?.bestPractices ??
+        null,
+      seo: desktopResult?.scores?.seo ?? mobileResult?.scores?.seo ?? null,
+    };
+
+    const allSuggestions = [
+      ...(desktopResult?.suggestions || []),
+      ...(mobileResult?.suggestions || []),
+    ];
+
+    const uniqueSuggestions = allSuggestions.filter(
+      (s, index, arr) => arr.findIndex((t) => t.id === s.id) === index
+    );
+
+    uniqueSuggestions.sort((a, b) => a.score - b.score);
+
+    return {
+      url,
+      desktop: desktopResult,
+      mobile: mobileResult,
+      scores: aggregatedScores,
+      suggestions: uniqueSuggestions,
+    };
+  } catch (error) {
+    console.error(
+      "PageSpeed Insights error:",
+      error?.response?.data || error.message
+    );
+    return {
+      error: "Failed to fetch PageSpeed data",
+      scores: {},
+      suggestions: [],
+    };
   }
+}
+
 
   extractMetric(audit) {
     if (!audit) return null;
