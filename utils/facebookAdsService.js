@@ -1,4 +1,4 @@
-import * as FB from 'fb';
+import FB from 'fb';
 
 class FacebookAdsService {
   constructor() {
