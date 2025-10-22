@@ -1,6 +1,7 @@
 import BaseController from './BaseController.js';
 import { sendSuccess, sendError } from '../utils/responseHelpers.js';
 import seoService from '../utils/seoService.js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // In-memory cache for SEO results
 const seoCache = new Map();
@@ -13,7 +14,7 @@ const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 class SeoController extends BaseController {
   constructor() {
     super();
-    this.bindMethods(['analyzeUrl']);
+    this.bindMethods(['analyzeUrl', 'getAiSuggestions']);
   }
 
   /**
@@ -199,9 +200,58 @@ class SeoController extends BaseController {
       sendSuccess(res, result.data);
     }, req, res, 'Server error during SEO analysis');
   }
+
+  /**
+   * Get AI-powered suggestions for SEO issues
+   */
+  async getAiSuggestions(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { issues } = req.body;
+
+      if (!issues || !Array.isArray(issues) || issues.length === 0) {
+        return sendError(res, 'Issues array is required', 400);
+      }
+
+      // Initialize Gemini AI
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+      // Prepare the prompt for Gemini
+      const issuesText = issues.map((issue, index) => 
+        `${index + 1}. ${issue.title}: ${issue.description} (Score: ${issue.score}/100, Category: ${issue.category})`
+      ).join('\n');
+
+      const prompt = `You are an expert SEO consultant. I have the following SEO issues from a website analysis:
+
+${issuesText}
+
+Please provide practical, actionable suggestions to fix these issues. For each issue, give:
+1. A clear explanation of why this issue matters
+2. Simple, step-by-step instructions to fix it (as bullet points)
+3. Priority level (High/Medium/Low)
+4. Expected impact on performance (High/Medium/Low)
+5. Code examples or configuration snippets if applicable (provide actual code)
+
+Format your response as a JSON array where each object has: issueIndex, title, explanation, steps (array of strings), priority, impact, codeExample (string, optional).
+
+Respond only with valid JSON, no additional text.`;
+
+      try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Parse the JSON response
+        const suggestions = JSON.parse(text);
+
+        sendSuccess(res, { suggestions });
+      } catch (error) {
+        console.error('Gemini API error:', error);
+        return sendError(res, 'Failed to generate AI suggestions', 500);
+      }
+    }, req, res, 'Server error during AI suggestions generation');
+  }
 }
 
-// Create instance and export methods
-const seoController = new SeoController();
-
 export const analyzeUrl = seoController.analyzeUrl;
+export const getAiSuggestions = seoController.getAiSuggestions;
