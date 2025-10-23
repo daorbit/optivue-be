@@ -109,8 +109,7 @@ class SeoService {
           url
         )}&strategy=${strategy}&${categories
           .map((c) => `category=${c}`)
-          .join("&")}&key=${apiKey}`,
-        { timeout: 3000000 }
+          .join("&")}&key=${apiKey}`
       )
     );
 
