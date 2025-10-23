@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { signup, login, getProfile } from '../controllers/authController.js';
+import { signup, login, getProfile, verifyOtp, getOtp } from '../controllers/authController.js';
 import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
@@ -32,9 +32,22 @@ const loginValidation = [
     .withMessage('Password is required')
 ];
 
+const verifyOtpValidation = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('otp')
+    .isLength({ min: 6, max: 6 })
+    .isNumeric()
+    .withMessage('OTP must be a 6-digit number')
+];
+
 // Routes
 router.post('/signup', signupValidation, signup);
 router.post('/login', loginValidation, login);
+router.post('/verify-otp', verifyOtpValidation, verifyOtp);
+router.post('/get-otp', getOtp); // Development only
 router.get('/profile', authMiddleware, getProfile);
 
 export default router;
