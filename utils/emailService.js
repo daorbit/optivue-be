@@ -2,10 +2,9 @@ import axios from "axios";
 
 class EmailService {
   constructor() {
-    this.apiKey =
-      "REDACTED_API_KEY";
-    this.fromEmail = "daorbit2k25@gmail.com";
-    this.fromName = "Optivue";
+    this.apiKey = process.env.BREVO_API_KEY;
+    this.fromEmail = process.env.BREVO_FROM_EMAIL || "daorbit2k25@gmail.com";
+    this.fromName = process.env.BREVO_FROM_NAME || "Optivue";
     this.baseURL = "https://api.brevo.com/v3";
   }
 
