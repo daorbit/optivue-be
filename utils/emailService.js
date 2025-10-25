@@ -30,6 +30,10 @@ class EmailService {
           sender: {
             name: this.fromName,
             email: this.fromEmail,
+            replyTo: {
+              email: this.fromEmail,
+              name: this.fromName
+            }
           },
           to: [
             {
@@ -88,6 +92,10 @@ class EmailService {
           sender: {
             name: this.fromName,
             email: this.fromEmail,
+            replyTo: {
+              email: this.fromEmail,
+              name: this.fromName
+            }
           },
           to: [
             {
@@ -95,30 +103,40 @@ class EmailService {
               name: toEmail.split("@")[0],
             },
           ],
-          subject: "Reset Your Optivue Password",
+          subject: "Optivue Password Reset Request",
           htmlContent: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Reset Your Password</h2>
-            <p>You requested a password reset for your Optivue account.</p>
-            <p>Please click the button below to reset your password:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <table border="0" cellpadding="0" cellspacing="0" style="border-radius: 5px; background-color: #007bff; display: inline-block;">
-                <tr>
-                  <td style="padding: 12px 24px; text-align: center;">
-                    <a href="${resetUrl}" style="color: white; text-decoration: none; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold;">Reset Password</a>
-                  </td>
-                </tr>
-              </table>
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #dee2e6;">
+              <h1 style="color: #007bff; margin: 0; font-size: 24px;">Optivue</h1>
+              <p style="color: #6c757d; margin: 5px 0 0 0; font-size: 14px;">Secure Password Reset</p>
             </div>
-            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #007bff;">${resetUrl}</p>
-            <p>This link will expire in 1 hour.</p>
-            <p>If you didn't request this password reset, please ignore this email.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="color: #666; font-size: 12px;">This is an automated message from Optivue. Please do not reply to this email.</p>
+            <div style="padding: 30px 20px;">
+              <h2 style="color: #333; margin-top: 0;">Reset Your Password</h2>
+              <p>Hello,</p>
+              <p>We received a request to reset your password for your Optivue account. If you made this request, please click the button below to reset your password:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetUrl}" style="background-color: #007bff; color: white; text-decoration: none; padding: 12px 24px; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; border-radius: 5px; display: inline-block;">Reset Password</a>
+              </div>
+              <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; color: #007bff; background-color: #f8f9fa; padding: 10px; border-radius: 3px;">${resetUrl}</p>
+              <p><strong>This link will expire in 1 hour for security reasons.</strong></p>
+              <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged, and no action is required.</p>
+              <p>For security reasons, we recommend choosing a strong password and not sharing it with anyone.</p>
+            </div>
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #dee2e6;">
+              <p style="color: #6c757d; font-size: 12px; margin: 0;">
+                This is an automated message from Optivue.<br>
+                If you have any questions, please contact our support team.<br>
+                © 2025 Optivue. All rights reserved.
+              </p>
+            </div>
           </div>
         `,
           tags: ["password-reset"],
+          headers: {
+            "X-Mailer": "Optivue Mail Service",
+            "X-Auto-Response-Suppress": "All"
+          }
         },
         {
           headers: {
