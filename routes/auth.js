@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { signup, login, getProfile, verifyOtp, getOtp, googleAuth, googleCallback } from '../controllers/authController.js';
+import { signup, login, getProfile, verifyOtp, getOtp, googleAuth, googleCallback, forgotPassword, resetPassword } from '../controllers/authController.js';
 import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
@@ -49,11 +49,29 @@ const googleCallbackValidation = [
     .withMessage('Authorization code is required')
 ];
 
+const forgotPasswordValidation = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email')
+];
+
+const resetPasswordValidation = [
+  body('token')
+    .notEmpty()
+    .withMessage('Reset token is required'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long')
+];
+
 // Routes
 router.post('/signup', signupValidation, signup);
 router.post('/login', loginValidation, login);
 router.post('/verify-otp', verifyOtpValidation, verifyOtp);
 router.post('/get-otp', getOtp); // Development only
+router.post('/forgot-password', forgotPasswordValidation, forgotPassword);
+router.post('/reset-password', resetPasswordValidation, resetPassword);
 router.get('/profile', authMiddleware, getProfile);
 
 router.get('/google', googleAuth);

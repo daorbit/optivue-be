@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import BaseController from './BaseController.js';
 import { sendSuccess, sendError, sendUnauthorized } from '../utils/responseHelpers.js';
@@ -13,7 +14,7 @@ import googleAuthService from '../utils/googleAuthService.js';
 class AuthController extends BaseController {
   constructor() {
     super();
-    this.bindMethods(['signup', 'login', 'getProfile', 'verifyOtp', 'getOtp', 'googleAuth', 'googleCallback']);
+    this.bindMethods(['signup', 'login', 'getProfile', 'verifyOtp', 'getOtp', 'googleAuth', 'googleCallback', 'forgotPassword', 'resetPassword']);
     // In-memory OTP storage: email -> { otp, expiresAt, userId }
     this.otpStore = new Map();
   }
@@ -206,6 +207,81 @@ class AuthController extends BaseController {
   }
 
   /**
+   * Forgot password - send reset email
+   */
+  async forgotPassword(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { email } = req.body;
+
+      // Find user by email
+      const user = await User.findOne({ email });
+      if (!user) {
+        // Don't reveal if email exists or not for security
+        return sendSuccess(res, { message: 'If an account with that email exists, a password reset link has been sent.' });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+      // Set token and expiry (1 hour)
+      user.resetPasswordToken = resetTokenHash;
+      user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+      await user.save();
+
+      // Send reset email
+      try {
+        await emailService.sendResetPasswordEmail(email, resetToken);
+      } catch (emailError) {
+        console.error('Reset password email sending failed:', emailError.message);
+        // Reset the token if email fails
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        return sendError(res, 'Failed to send reset email. Please try again.', 500);
+      }
+
+      sendSuccess(res, { message: 'If an account with that email exists, a password reset link has been sent.' });
+    }, req, res, 'Server error during password reset request');
+  }
+
+  /**
+   * Reset password with token
+   */
+  async resetPassword(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { token, password } = req.body;
+
+      // Hash the token to compare with stored hash
+      const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Find user with valid reset token
+      const user = await User.findOne({
+        resetPasswordToken: resetTokenHash,
+        resetPasswordExpires: { $gt: Date.now() }
+      });
+
+      if (!user) {
+        return sendError(res, 'Invalid or expired reset token', 400);
+      }
+
+      // Update password
+      user.password = password;
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+
+      // Generate new token for immediate login
+      const authToken = this.generateToken(user._id);
+
+      sendSuccess(res, {
+        token: authToken,
+        user: this.formatUserData(user)
+      }, 'Password reset successful. You are now logged in.');
+    }, req, res, 'Server error during password reset');
+  }
+
+  /**
    * Initiate Google OAuth flow
    */
   async googleAuth(req, res) {
@@ -283,3 +359,5 @@ export const verifyOtp = authController.verifyOtp;
 export const getOtp = authController.getOtp;
 export const googleAuth = authController.googleAuth;
 export const googleCallback = authController.googleCallback;
+export const forgotPassword = authController.forgotPassword;
+export const resetPassword = authController.resetPassword;
