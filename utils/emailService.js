@@ -79,7 +79,7 @@ class EmailService {
   async sendResetPasswordEmail(toEmail, resetToken) {
     console.log("Sending reset password email to:", toEmail);
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
     try {
       const response = await axios.post(
@@ -102,7 +102,13 @@ class EmailService {
             <p>You requested a password reset for your Optivue account.</p>
             <p>Please click the button below to reset your password:</p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; cursor: pointer;">Reset Password</a>
+              <table border="0" cellpadding="0" cellspacing="0" style="border-radius: 5px; background-color: #007bff; display: inline-block;">
+                <tr>
+                  <td style="padding: 12px 24px; text-align: center;">
+                    <a href="${resetUrl}" style="color: white; text-decoration: none; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold;">Reset Password</a>
+                  </td>
+                </tr>
+              </table>
             </div>
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
             <p style="word-break: break-all; color: #007bff;">${resetUrl}</p>
@@ -112,6 +118,7 @@ class EmailService {
             <p style="color: #666; font-size: 12px;">This is an automated message from Optivue. Please do not reply to this email.</p>
           </div>
         `,
+          tags: ["password-reset"],
         },
         {
           headers: {
