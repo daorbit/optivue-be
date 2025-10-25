@@ -102,7 +102,7 @@ class EmailService {
             <p>You requested a password reset for your Optivue account.</p>
             <p>Please click the button below to reset your password:</p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+              <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; cursor: pointer;">Reset Password</a>
             </div>
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
             <p style="word-break: break-all; color: #007bff;">${resetUrl}</p>
