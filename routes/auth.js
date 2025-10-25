@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { signup, login, getProfile, verifyOtp, getOtp } from '../controllers/authController.js';
+import { signup, login, getProfile, verifyOtp, getOtp, googleAuth, googleCallback } from '../controllers/authController.js';
 import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
@@ -43,11 +43,20 @@ const verifyOtpValidation = [
     .withMessage('OTP must be a 6-digit number')
 ];
 
+const googleCallbackValidation = [
+  body('code')
+    .notEmpty()
+    .withMessage('Authorization code is required')
+];
+
 // Routes
 router.post('/signup', signupValidation, signup);
 router.post('/login', loginValidation, login);
 router.post('/verify-otp', verifyOtpValidation, verifyOtp);
 router.post('/get-otp', getOtp); // Development only
 router.get('/profile', authMiddleware, getProfile);
+
+router.get('/google', googleAuth);
+router.post('/google/callback', googleCallbackValidation, googleCallback);
 
 export default router;

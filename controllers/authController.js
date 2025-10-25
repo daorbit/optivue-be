@@ -4,6 +4,7 @@ import BaseController from './BaseController.js';
 import { sendSuccess, sendError, sendUnauthorized } from '../utils/responseHelpers.js';
 import { findUserFromRequest } from '../utils/authHelpers.js';
 import emailService from '../utils/emailService.js';
+import googleAuthService from '../utils/googleAuthService.js';
 
 /**
  * Authentication Controller
@@ -12,7 +13,7 @@ import emailService from '../utils/emailService.js';
 class AuthController extends BaseController {
   constructor() {
     super();
-    this.bindMethods(['signup', 'login', 'getProfile', 'verifyOtp', 'getOtp']);
+    this.bindMethods(['signup', 'login', 'getProfile', 'verifyOtp', 'getOtp', 'googleAuth', 'googleCallback']);
     // In-memory OTP storage: email -> { otp, expiresAt, userId }
     this.otpStore = new Map();
   }
@@ -203,6 +204,73 @@ class AuthController extends BaseController {
       sendSuccess(res, { user: userData });
     }, req, res, 'Server error retrieving profile');
   }
+
+  /**
+   * Initiate Google OAuth flow
+   */
+  async googleAuth(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const authUrl = googleAuthService.getAuthUrl();
+      sendSuccess(res, { authUrl }, 'Google authentication URL generated');
+    }, req, res, 'Server error initiating Google authentication');
+  }
+
+  /**
+   * Handle Google OAuth callback
+   */
+  async googleCallback(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { code } = req.body;
+
+      if (!code) {
+        return sendError(res, 'Authorization code is required', 400);
+      }
+
+      // Get user info from Google
+      const googleUser = await googleAuthService.authenticateWithCode(code);
+
+      // Check if user already exists
+      let user = await User.findOne({ 
+        $or: [
+          { googleId: googleUser.id },
+          { email: googleUser.email }
+        ]
+      });
+
+      if (user) {
+        // User exists - update Google ID if not set
+        if (!user.googleId) {
+          user.googleId = googleUser.id;
+          user.authProvider = 'google';
+          user.isVerified = true;
+          if (googleUser.picture) {
+            user.profilePicture = googleUser.picture;
+          }
+          await user.save();
+        }
+      } else {
+        // Create new user
+        user = new User({
+          username: googleUser.email.split('@')[0] + '_' + Date.now(), // Generate unique username
+          email: googleUser.email,
+          googleId: googleUser.id,
+          profilePicture: googleUser.picture || '',
+          authProvider: 'google',
+          isVerified: true, // Google accounts are pre-verified
+          password: Math.random().toString(36).slice(-8) // Random password (won't be used)
+        });
+        await user.save();
+      }
+
+      // Generate JWT token
+      const token = this.generateToken(user._id);
+
+      sendSuccess(res, {
+        token,
+        user: this.formatUserData(user)
+      }, 'Google authentication successful');
+    }, req, res, 'Server error during Google authentication');
+  }
 }
 
 // Create instance and export methods
@@ -213,3 +281,5 @@ export const login = authController.login;
 export const getProfile = authController.getProfile;
 export const verifyOtp = authController.verifyOtp;
 export const getOtp = authController.getOtp;
+export const googleAuth = authController.googleAuth;
+export const googleCallback = authController.googleCallback;
