@@ -14,7 +14,7 @@ dotenv.config();
 const app = express();
 
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect("mongodb+srv://Vercel-Admin-da-orbit-db:E9EEwcGS9tKCceuT@da-orbit-db.mus3jx8.mongodb.net/?retryWrites=true&w=majority")
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
