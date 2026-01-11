@@ -157,11 +157,46 @@ class EmailService {
   }
 
   /**
-   * Generate a 6-digit OTP
-   * @returns {string} - 6-digit OTP
+   * Send a generic email
+   * @param {Object} options - Email options
+   * @param {string} options.to - Recipient email
+   * @param {string} options.subject - Email subject
+   * @param {string} options.html - HTML content
+   * @param {string} options.text - Text content (optional)
+   * @returns {Promise<Object>} - API response
    */
-  generateOTP() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  async sendEmail({ to, subject, html, text }) {
+    try {
+      const response = await axios.post(
+        `${this.baseURL}/smtp/email`,
+        {
+          sender: {
+            name: this.fromName,
+            email: this.fromEmail,
+          },
+          to: [
+            {
+              email: to,
+              name: to.split("@")[0],
+            },
+          ],
+          subject: subject,
+          htmlContent: html,
+          textContent: text,
+        },
+        {
+          headers: {
+            "api-key": this.apiKey,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Error sending email:", error.response?.data || error.message);
+      throw new Error("Failed to send email");
+    }
   }
 }
 

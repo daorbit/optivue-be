@@ -11,22 +11,42 @@ A Node.js Express backend for the Optivue application.
 
 ## Environment Variables
 
-Create a `.env` file in the root directory with the following variables:
-```
-PORT=3000
-NODE_ENV=development
-MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
-```
+Copy `.env.example` to `.env` and fill in your actual values:
 
-## Running the Application
+### Required Environment Variables
+- `MONGODB_URI`: MongoDB connection string
+- `GOOGLE_CLIENT_ID`: Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET`: Google OAuth client secret
+- `GOOGLE_REDIRECT_URI`: Google OAuth redirect URI
+- `GOOGLE_REFRESH_TOKEN`: Google OAuth refresh token
+- `BREVO_API_KEY`: Brevo (Sendinblue) API key for email service
+- `BREVO_FROM_NAME`: Sender name for emails (default: Optivue)
+- `BREVO_FROM_EMAIL`: Sender email address
+- `SITE_URL`: Base site URL
+- `PORT`: Server port (default: 8000)
+- `FRONTEND_URL`: Frontend application URL
 
-For development:
+## Deployment
+
+### Vercel Deployment
+1. Set environment variables in Vercel dashboard or using CLI:
+   ```
+   vercel env add BREVO_API_KEY
+   vercel env add MONGODB_URI
+   # Add other required environment variables
+   ```
+
+2. Deploy:
+   ```
+   vercel --prod
+   ```
+
+### Local Development
 ```
 npm run dev
 ```
 
-For production:
+### Production
 ```
 npm start
 ```

@@ -7,6 +7,7 @@ import authRouter from "./routes/auth.js";
 import accountRouter from "./routes/account.js";
 import facebookAdsRouter from "./routes/facebookAds.js";
 import seoRouter from "./routes/seo.js";
+import bulkEmailsRouter from "./routes/bulkEmails.js";
 import logger from "./middleware/logger.js";
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use("/auth", authRouter);
 app.use("/api", accountRouter);
 app.use("/api", facebookAdsRouter);
 app.use("/api/seo", seoRouter);
+app.use("/api/bulk-emails", bulkEmailsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
