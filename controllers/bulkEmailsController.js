@@ -203,7 +203,7 @@ class BulkEmailsController extends BaseController {
       }
 
       // Get template
-      const templates = await this.getEmailTemplates(req, { json: (data) => data });
+      const templates = { templates: this.getTemplates() };
       const template = templates.templates.find(t => t.id === templateId);
 
       if (!template) {
