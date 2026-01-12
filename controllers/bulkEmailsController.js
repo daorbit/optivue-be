@@ -1,6 +1,11 @@
 import EmailService from '../utils/emailService.js';
+import BaseController from './BaseController.js';
 
-class BulkEmailsController {
+class BulkEmailsController extends BaseController {
+  constructor() {
+    super();
+    this.bindMethods(['getEmailTemplates', 'sendBulkEmail']);
+  }
   // Get available email templates
   async getEmailTemplates(req, res) {
     try {
