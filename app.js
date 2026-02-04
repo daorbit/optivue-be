@@ -23,7 +23,7 @@ mongoose
 app.use(
   cors({
     origin: [
-      "http://localhost:3000",
+      "http://localhost:8080",
       "https://optivue-fe.vercel.app",
       "https://optivue.daorbit.in",
     ],
@@ -47,7 +47,7 @@ app.use((err, req, res, next) => {
   res.status(500).send("Something broke!");
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 
 // Only start the server if not running on Vercel
 if (!process.env.VERCEL) {
