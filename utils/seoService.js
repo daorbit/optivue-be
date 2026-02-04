@@ -26,6 +26,9 @@ class SeoService {
 
       results.technical = await this.getTechnicalSeoData(url);
 
+      const siteFilesData = await this.checkSiteFiles(url);
+      results.siteFiles = siteFilesData;
+
       return {
         success: true,
         data: results,
@@ -596,6 +599,59 @@ class SeoService {
     if ($("a").length > 3) score += 15;
 
     return Math.min(100, score);
+  }
+
+  async checkSiteFiles(url) {
+    try {
+      const domain = new URL(url).hostname;
+      const robotsUrl = `https://${domain}/robots.txt`;
+      const sitemapUrl = `https://${domain}/sitemap.xml`;
+
+      // Check robots.txt
+      const robotsResponse = await axios.get(robotsUrl, { timeout: 5000 });
+      const robotsPresent = robotsResponse.status === 200;
+
+      // Check sitemap (basic check via robots.txt or common path)
+      let sitemapPresent = false;
+      let sitemapUrls = [];
+      if (robotsPresent) {
+        const robotsContent = robotsResponse.data;
+        const sitemapMatches = robotsContent.match(/Sitemap:\s*(https?:\/\/[^\s]+)/gi);
+        if (sitemapMatches) {
+          sitemapUrls = sitemapMatches.map(match => match.replace(/Sitemap:\s*/i, ''));
+          sitemapPresent = true;
+        }
+      }
+      // Fallback: Check common sitemap path
+      if (!sitemapPresent) {
+        try {
+          const sitemapResponse = await axios.get(sitemapUrl, { timeout: 5000 });
+          if (sitemapResponse.status === 200) {
+            sitemapPresent = true;
+            sitemapUrls = [sitemapUrl];
+          }
+        } catch (error) {
+          // Sitemap not found
+        }
+      }
+
+      return {
+        robotsTxt: {
+          present: robotsPresent,
+          url: robotsUrl,
+        },
+        sitemap: {
+          present: sitemapPresent,
+          urls: sitemapUrls,
+        },
+      };
+    } catch (error) {
+      return {
+        error: `Failed to check site files: ${error.message}`,
+        robotsTxt: { present: false },
+        sitemap: { present: false, urls: [] },
+      };
+    }
   }
 }
 

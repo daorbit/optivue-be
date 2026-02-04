@@ -14,7 +14,7 @@ const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 class SeoController extends BaseController {
   constructor() {
     super();
-    this.bindMethods(['analyzeUrl', 'getAiSuggestions']);
+    this.bindMethods(['analyzeUrl', 'getAiSuggestions', 'checkSiteFiles']);
   }
 
   /**
@@ -266,9 +266,23 @@ Respond only with valid JSON, no additional text.`;
       }
     }, req, res, 'Server error during AI suggestions generation');
   }
+
+  async checkSiteFiles(req, res) {
+    await this.executeWithErrorHandling(async (req, res) => {
+      const { url } = req.body;
+
+      if (!url) {
+        return sendError(res, 'URL is required', 400);
+      }
+
+      const result = await seoService.checkSiteFiles(url);
+      sendSuccess(res, result);
+    }, req, res, 'Server error during site files check');
+  }
 }
 
  const seoController = new SeoController();
 
 export const analyzeUrl = seoController.analyzeUrl;
 export const getAiSuggestions = seoController.getAiSuggestions;
+export const checkSiteFiles = seoController.checkSiteFiles;
